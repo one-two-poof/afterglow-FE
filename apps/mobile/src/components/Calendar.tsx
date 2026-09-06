@@ -100,7 +100,7 @@ export const Calendar = ({
           ),
         ).map((weekday, i) => (
           <Text
-            key={weekday}
+            key={`weekday-${i}`}
             className={cn(
               "flex-1 py-2 text-center text-label-sm",
               i === 0
