@@ -6,8 +6,23 @@ interface ExternalMapDestination {
   label: string;
 }
 
+interface ClipboardModule {
+  setStringAsync: (text: string) => Promise<unknown>;
+}
+
+type ClipboardLoader = () => Promise<ClipboardModule>;
+
 export function formatPlaceForClipboard(name: string, address?: string) {
   return address ? `${name}\n${address}` : name;
+}
+
+export async function copyPlaceToClipboard(
+  name: string,
+  address?: string,
+  loadClipboard: ClipboardLoader = () => import("expo-clipboard"),
+) {
+  const clipboard = await loadClipboard();
+  await clipboard.setStringAsync(formatPlaceForClipboard(name, address));
 }
 
 export function buildExternalMapUrl(

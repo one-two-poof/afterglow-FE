@@ -3,7 +3,6 @@ import { colors } from "@afterglow/tokens";
 import { Input, TagList } from "@afterglow/ui-native";
 import { toLatLng } from "@afterglow/utils";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import * as Clipboard from "expo-clipboard";
 import {
   Crosshair,
   Flag,
@@ -45,10 +44,7 @@ import {
   type RoutePin,
 } from "@/components/MapLibreMap/types";
 import { getCurrentLocation } from "@/lib/location";
-import {
-  buildExternalMapUrl,
-  formatPlaceForClipboard,
-} from "@/lib/place-actions";
+import { buildExternalMapUrl, copyPlaceToClipboard } from "@/lib/place-actions";
 import { fetchRouteLines, ROUTE_COLORS, type RouteLine } from "@/lib/route";
 import { TripPlanPanel } from "@/components/TripPlanPanel";
 import { useAccessToken } from "@/hooks/use-access-token";
@@ -468,8 +464,9 @@ export default function HomeScreen() {
     if (!detail?.detail) return;
 
     try {
-      await Clipboard.setStringAsync(
-        formatPlaceForClipboard(detail.detail.title, detail.detail.description),
+      await copyPlaceToClipboard(
+        detail.detail.title,
+        detail.detail.description,
       );
       showToast(t("home.detail.copySuccess"));
     } catch {

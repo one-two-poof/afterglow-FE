@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildExternalMapUrl,
+  copyPlaceToClipboard,
   formatPlaceForClipboard,
 } from "../src/lib/place-actions.ts";
 
@@ -15,6 +16,18 @@ test("formats a place name and address on separate lines", () => {
 
 test("omits a missing address from copied text", () => {
   assert.equal(formatPlaceForClipboard("경복궁"), "경복궁");
+});
+
+test("loads the native clipboard only when copy is requested", async () => {
+  let copiedText;
+
+  await copyPlaceToClipboard("경복궁", "서울 종로구 사직로 161", async () => ({
+    setStringAsync: async (text) => {
+      copiedText = text;
+    },
+  }));
+
+  assert.equal(copiedText, "경복궁\n서울 종로구 사직로 161");
 });
 
 test("builds an Apple Maps URL on iOS", () => {
