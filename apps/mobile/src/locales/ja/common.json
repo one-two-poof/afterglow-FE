@@ -171,6 +171,7 @@
   "course.outdoor": "屋外",
   "course.walkDifficulty": "徒歩 {{level}}/5",
   "course.viewOnMap": "{{name}}を地図で見る",
+  "course.viewCourseOnMap": "コース全体を地図で見る",
   "course.distanceFromPrevious": "前の地点から{{distance}}km",
   "course.treatmentScheduled": "施術予定",
   "course.departure": "出発",

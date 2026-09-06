@@ -6,7 +6,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAccessToken } from "@/hooks/use-access-token";
 import { useRecommendations } from "@/hooks/use-recommendations";
 import { useI18n } from "@/i18n/i18n-provider";
-import { courseTitle } from "@/types/recommendation";
+import { type CourseMarker, courseTitle } from "@/types/recommendation";
 
 import { CourseItinerary } from "./CourseItinerary";
 import { MyCourseSkeleton } from "./MyCourseSkeleton";
@@ -41,6 +41,7 @@ function NotFound() {
  */
 export function CourseDetail({ selectionId }: { selectionId: number }) {
   const { t } = useI18n();
+  const router = useRouter();
   const token = useAccessToken();
   const isAuthed = typeof token === "string";
   const { data: courses = [], isLoading } = useRecommendations(isAuthed);
@@ -61,13 +62,36 @@ export function CourseDetail({ selectionId }: { selectionId: number }) {
   }
 
   const title = courseTitle(course);
+  const openCourseMap = (marker?: CourseMarker) => {
+    router.push({
+      pathname: "/",
+      params: {
+        savedCourseId: String(course.selectionId),
+        ...(marker
+          ? {
+              markerLat: String(marker.lat),
+              markerLng: String(marker.lng),
+              markerLabel: marker.label,
+            }
+          : {}),
+      },
+    });
+  };
 
   return (
     <View className="flex-1 bg-bg">
       <ScreenHeader title={title} />
       <ScrollView contentContainerClassName="gap-4 px-5 py-5 pb-10">
         <Text className="text-heading-sm text-text">{title}</Text>
-        <CourseItinerary course={course} />
+        <Button
+          variant="secondary"
+          size="lg"
+          className="w-full"
+          onPress={() => openCourseMap()}
+        >
+          {t("course.viewCourseOnMap")}
+        </Button>
+        <CourseItinerary course={course} onPlacePress={openCourseMap} />
       </ScrollView>
     </View>
   );

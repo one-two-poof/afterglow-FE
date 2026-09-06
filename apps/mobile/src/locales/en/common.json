@@ -171,6 +171,7 @@
   "course.outdoor": "Outdoor",
   "course.walkDifficulty": "Walking {{level}}/5",
   "course.viewOnMap": "View {{name}} on map",
+  "course.viewCourseOnMap": "View full trip on map",
   "course.distanceFromPrevious": "{{distance}} km from the previous stop",
   "course.treatmentScheduled": "Treatment scheduled",
   "course.departure": "Start",

@@ -2,7 +2,7 @@ import { useToastStore } from "@afterglow/stores";
 import { colors } from "@afterglow/tokens";
 import { Input, TagList } from "@afterglow/ui-native";
 import { toLatLng } from "@afterglow/utils";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
   Crosshair,
   Flag,
@@ -13,7 +13,7 @@ import {
   Search,
   X,
 } from "lucide-react-native";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   type ColorValue,
@@ -165,6 +165,13 @@ const placeToDetail = (place: Place): MarkerDetail => ({
 export default function HomeScreen() {
   const { locale, t } = useI18n();
   const router = useRouter();
+  const { savedCourseId, markerLat, markerLng, markerLabel } =
+    useLocalSearchParams<{
+      savedCourseId?: string;
+      markerLat?: string;
+      markerLng?: string;
+      markerLabel?: string;
+    }>();
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((s) => s.show);
   const [planOpen, setPlanOpen] = useState(false);
@@ -173,6 +180,10 @@ export default function HomeScreen() {
   const [coursePlaceMarker, setCoursePlaceMarker] = useState<MapMarker | null>(
     null,
   );
+  // 내 코스 상세에서 특정 장소를 열었을 때만 사용하는 마커. 추천 결과 패널의
+  // coursePlaceMarker와 분리해 상세를 닫을 때 여행 계획 패널이 열리지 않게 한다.
+  const [savedCoursePlaceMarker, setSavedCoursePlaceMarker] =
+    useState<MapMarker | null>(null);
 
   const [search, setSearch] = useState("");
   // 드롭다운 열림 여부. 결과 선택 시 닫아 재요청을 막는다.
@@ -241,8 +252,7 @@ export default function HomeScreen() {
     (course) => String(course.selectionId) === filter,
   );
   const selectedCourseMap = useMemo(
-    () =>
-      selectedCourse ? savedCourseToMapDecoration(selectedCourse) : null,
+    () => (selectedCourse ? savedCourseToMapDecoration(selectedCourse) : null),
     [selectedCourse],
   );
 
@@ -276,6 +286,7 @@ export default function HomeScreen() {
       return;
     }
     setCoursePlaceMarker(null);
+    setSavedCoursePlaceMarker(null);
     setDetail(null);
     setPlanOpen(true);
   };
@@ -312,6 +323,7 @@ export default function HomeScreen() {
     // 검색 장소를 고르면 코스 선택은 해제한다(마커 대상은 하나만).
     setFilter(FILTER_ALL);
     setCoursePlaceMarker(null);
+    setSavedCoursePlaceMarker(null);
     resetRoutePlan();
     // 선택한 장소의 마커 상세를 바로 띄운다(마커를 탭한 것과 동일한 카드).
     setDetail({
@@ -359,8 +371,60 @@ export default function HomeScreen() {
     setSelectedPlace(null);
     setDetail(null);
     setCoursePlaceMarker(null);
+    setSavedCoursePlaceMarker(null);
     resetRoutePlan();
   };
+
+  // 내 코스 상세에서 전달된 딥링크를 한 번 소비한다. 코스 전체 보기라면 전체
+  // 마커/연결선을, 개별 장소 보기라면 해당 마커와 상세 시트를 바로 보여준다.
+  useEffect(() => {
+    if (!savedCourseId) return;
+
+    const course = courses.find(
+      (item) => String(item.selectionId) === savedCourseId,
+    );
+    if (!course) return;
+
+    const lat = Number(markerLat);
+    const lng = Number(markerLng);
+    const requestedMarker =
+      Number.isFinite(lat) && Number.isFinite(lng)
+        ? savedCourseToMapDecoration(course).markers.find(
+            (marker) =>
+              marker.lat === lat &&
+              marker.lng === lng &&
+              (!markerLabel || marker.label === markerLabel),
+          )
+        : undefined;
+
+    const frame = requestAnimationFrame(() => {
+      resetRoutePlan();
+      setSearch("");
+      setSearchOpen(false);
+      setSelectedPlace(null);
+      setCoursePlaceMarker(null);
+      setFilter(savedCourseId);
+      setSavedCoursePlaceMarker(requestedMarker ?? null);
+      setDetail(requestedMarker ?? null);
+      setDetailExpanded(false);
+      router.setParams({
+        savedCourseId: undefined,
+        markerLat: undefined,
+        markerLng: undefined,
+        markerLabel: undefined,
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [
+    courses,
+    markerLabel,
+    markerLat,
+    markerLng,
+    resetRoutePlan,
+    router,
+    savedCourseId,
+  ]);
 
   // 상세 카드 닫기(X). 패널에서 열린 상세(coursePlaceMarker)면 닫는 대신 패널로 복귀한다.
   // 일반 상세(검색/마커/카테고리)는 그냥 닫는다. 어느 쪽이든 그린 경로는 정리한다.
@@ -369,6 +433,7 @@ export default function HomeScreen() {
     setDetailExpanded(false);
     setDetail(null);
     setCoursePlaceMarker(null);
+    setSavedCoursePlaceMarker(null);
     resetRoutePlan();
     if (fromPanel) {
       setPlanOpen(true);
@@ -486,6 +551,9 @@ export default function HomeScreen() {
   // 마커 우선순위: 추천 코스 장소 → 검색 장소 → 선택 코스 → 선택 카테고리.
   // 추천 코스에서 장소를 탭하면 그 한 지점만 찍어 카메라가 이동한다(단일 마커 flyTo).
   const markers = useMemo<MapMarker[]>(() => {
+    if (savedCoursePlaceMarker) {
+      return [savedCoursePlaceMarker];
+    }
     if (coursePlaceMarker) {
       return [coursePlaceMarker];
     }
@@ -508,6 +576,7 @@ export default function HomeScreen() {
     }));
   }, [
     coursePlaceMarker,
+    savedCoursePlaceMarker,
     selectedPlace,
     selectedCourse,
     selectedCourseMap,
@@ -519,7 +588,11 @@ export default function HomeScreen() {
       <MapLibreMap
         ref={mapRef}
         markers={markers}
-        connectionLines={selectedCourseMap?.connectionLines}
+        connectionLines={
+          savedCoursePlaceMarker
+            ? undefined
+            : selectedCourseMap?.connectionLines
+        }
         markerFitPadding={
           selectedCourseMap ? SAVED_COURSE_MAP_PADDING : undefined
         }

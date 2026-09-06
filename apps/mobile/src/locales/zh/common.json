@@ -171,6 +171,7 @@
   "course.outdoor": "室外",
   "course.walkDifficulty": "步行难度 {{level}}/5",
   "course.viewOnMap": "在地图上查看{{name}}",
+  "course.viewCourseOnMap": "在地图上查看完整行程",
   "course.distanceFromPrevious": "距上一地点{{distance}}公里",
   "course.treatmentScheduled": "医美项目安排",
   "course.departure": "出发",
