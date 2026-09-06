@@ -10,7 +10,8 @@ import { PurposeStep } from "../steps/PurposeStep";
 import { ScheduleStep } from "../steps/ScheduleStep";
 import { TreatmentDateStep } from "../steps/TreatmentDateStep";
 import { TreatmentStep } from "../steps/TreatmentStep";
-import { WalkPreferenceStep } from "../steps/WalkPreferenceStep";
+import { ActivityLevelStep } from "../steps/ActivityLevelStep";
+import { MobilityRangeStep } from "../steps/MobilityRangeStep";
 import type { TripPlanPayload } from "../types";
 
 const MS_PER_DAY = 86400000;
@@ -55,8 +56,10 @@ export const useTripPlanForm = (): TripPlanForm => {
   );
   // 여행 주요 목적 (단일 선택)
   const [purpose, setPurpose] = useState<string | null>(null);
-  // 도보 선호도 (1~5)
-  const [walkPreference, setWalkPreference] = useState<number | null>(null);
+  // 하루 시작 관광지 기준 활동 반경 (1~5)
+  const [mobilityRange, setMobilityRange] = useState<number | null>(null);
+  // 여행 중 활동 강도 (기존 도보 선호도 척도, 1~5)
+  const [activityLevel, setActivityLevel] = useState<number | null>(null);
   // 여행 일자별 선택 숙소 (인덱스 = n번째 날). null이면 미선택.
   const [selectedPlaces, setSelectedPlaces] = useState<(Place | null)[]>([]);
 
@@ -147,13 +150,17 @@ export const useTripPlanForm = (): TripPlanForm => {
       content: <PurposeStep value={purpose} onChange={setPurpose} />,
     },
     {
-      title: t("plan.title.walk"),
-      canNext: walkPreference !== null,
+      title: t("plan.title.mobility"),
+      canNext: mobilityRange !== null,
       content: (
-        <WalkPreferenceStep
-          value={walkPreference}
-          onChange={setWalkPreference}
-        />
+        <MobilityRangeStep value={mobilityRange} onChange={setMobilityRange} />
+      ),
+    },
+    {
+      title: t("plan.title.activity"),
+      canNext: activityLevel !== null,
+      content: (
+        <ActivityLevelStep value={activityLevel} onChange={setActivityLevel} />
       ),
     },
   ];
@@ -164,7 +171,8 @@ export const useTripPlanForm = (): TripPlanForm => {
     setTreatments([]);
     setTreatmentDates({});
     setPurpose(null);
-    setWalkPreference(null);
+    setMobilityRange(null);
+    setActivityLevel(null);
     setSelectedPlaces([]);
   }, []);
 
@@ -180,7 +188,8 @@ export const useTripPlanForm = (): TripPlanForm => {
       treatments,
       treatmentDates,
       purpose ?? "",
-      walkPreference ?? 3,
+      mobilityRange ?? 3,
+      activityLevel ?? 3,
     );
 
   return { steps, reset, buildPayload };

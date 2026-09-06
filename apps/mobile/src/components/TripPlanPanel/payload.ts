@@ -12,7 +12,8 @@ export const buildTripPlanPayload = (
   treatments: string[],
   treatmentDates: Record<string, string>,
   userPurpose: string,
-  userWalkPreference: number,
+  mobilityRange: number,
+  activityLevel: number,
 ): TripPlanPayload | null => {
   const { start, end } = range;
   if (!start || !end) {
@@ -38,7 +39,8 @@ export const buildTripPlanPayload = (
       .filter((name) => treatmentDates[name])
       .map((name) => ({ name, date: treatmentDates[name]! })),
     user_purpose: userPurpose,
-    user_walk_preference: userWalkPreference,
+    mobility_range: mobilityRange,
+    activity_level: activityLevel,
     daily_startList,
   };
 };

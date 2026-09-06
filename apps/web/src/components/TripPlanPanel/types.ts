@@ -22,7 +22,9 @@ export interface TripPlanPayload {
   /** 선택한 시술 종류 + 각 시술의 날짜 */
   treatmentList: TreatmentSelection[];
   user_purpose: string;
-  /** 도보 선호도 (1~5) */
-  user_walk_preference: number;
+  /** 하루 시작 관광지에서 이동 가능한 활동 반경 (1~5) */
+  mobility_range: number;
+  /** 여행 중 원하는 활동 강도 (1~5) */
+  activity_level: number;
   daily_startList: DailyStart[];
 }

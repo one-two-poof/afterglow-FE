@@ -7,11 +7,11 @@ import Svg, { Path } from "react-native-svg";
 import type { TranslationKey } from "@/i18n/config";
 import { useI18n } from "@/i18n/i18n-provider";
 
-type WalkPreferenceIconName =
+type ActivityLevelIconName =
   "relaxed" | "light" | "standard" | "active" | "walking-tour";
 
-const WALK_PREFERENCE_ICON_COLOR = "#0787d0";
-const WALK_PREFERENCE_ICON_PATHS: Record<WalkPreferenceIconName, string[]> = {
+const ACTIVITY_LEVEL_ICON_COLOR = "#0787d0";
+const ACTIVITY_LEVEL_ICON_PATHS: Record<ActivityLevelIconName, string[]> = {
   relaxed: [
     "M11 4 a 2 2 0 1 0 4 0 a 2 2 0 1 0 -4 0",
     "M7 21l3-4",
@@ -53,14 +53,14 @@ const WALK_PREFERENCE_ICON_PATHS: Record<WalkPreferenceIconName, string[]> = {
   ],
 };
 
-function WalkPreferenceIcon({ name }: { name: WalkPreferenceIconName }) {
+function ActivityLevelIcon({ name }: { name: ActivityLevelIconName }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      {WALK_PREFERENCE_ICON_PATHS[name].map((path) => (
+      {ACTIVITY_LEVEL_ICON_PATHS[name].map((path) => (
         <Path
           key={path}
           d={path}
-          stroke={WALK_PREFERENCE_ICON_COLOR}
+          stroke={ACTIVITY_LEVEL_ICON_COLOR}
           strokeWidth={1}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -70,66 +70,63 @@ function WalkPreferenceIcon({ name }: { name: WalkPreferenceIconName }) {
   );
 }
 
-export interface WalkPreferenceOption {
+export interface ActivityLevelOption {
   /** 제출 값 (1~5) */
   value: number;
   labelKey: TranslationKey;
-  icon: WalkPreferenceIconName;
+  icon: ActivityLevelIconName;
   descriptionKey: TranslationKey;
 }
 
-/** 도보 선호도 선택지. value(1~5)가 곧 제출 값(user_walk_preference) */
-export const WALK_PREFERENCES: WalkPreferenceOption[] = [
+/** 활동 강도 선택지. 기존 도보 선호도 값과 동일한 1~5 척도를 사용한다. */
+export const ACTIVITY_LEVELS: ActivityLevelOption[] = [
   {
     value: 1,
-    labelKey: "plan.walk.1",
+    labelKey: "plan.activity.1",
     icon: "relaxed",
-    descriptionKey: "plan.walk.1Desc",
+    descriptionKey: "plan.activity.1Desc",
   },
   {
     value: 2,
-    labelKey: "plan.walk.2",
+    labelKey: "plan.activity.2",
     icon: "light",
-    descriptionKey: "plan.walk.2Desc",
+    descriptionKey: "plan.activity.2Desc",
   },
   {
     value: 3,
-    labelKey: "plan.walk.3",
+    labelKey: "plan.activity.3",
     icon: "standard",
-    descriptionKey: "plan.walk.3Desc",
+    descriptionKey: "plan.activity.3Desc",
   },
   {
     value: 4,
-    labelKey: "plan.walk.4",
+    labelKey: "plan.activity.4",
     icon: "active",
-    descriptionKey: "plan.walk.4Desc",
+    descriptionKey: "plan.activity.4Desc",
   },
   {
     value: 5,
-    labelKey: "plan.walk.5",
+    labelKey: "plan.activity.5",
     icon: "walking-tour",
-    descriptionKey: "plan.walk.5Desc",
+    descriptionKey: "plan.activity.5Desc",
   },
 ];
 
-export interface WalkPreferenceStepProps {
+export interface ActivityLevelStepProps {
   value: number | null;
   onChange: (value: number) => void;
 }
 
-/** 도보 선호도 선택 (단일 선택). 1~5 숫자를 제출 */
-export function WalkPreferenceStep({
-  value,
-  onChange,
-}: WalkPreferenceStepProps) {
+/** 활동 강도 선택 (단일 선택). 1~5 숫자를 제출 */
+export function ActivityLevelStep({ value, onChange }: ActivityLevelStepProps) {
   const { t } = useI18n();
   return (
     <View className="gap-3 pt-2">
       <Text className="text-body-sm text-text-secondary">
-        {t("plan.walk.prompt")}
+        {t("plan.activity.prompt")}
       </Text>
 
-      {WALK_PREFERENCES.map((option) => {
+      {ACTIVITY_LEVELS.map((option) => {
         const selected = value === option.value;
         return (
           <Pressable
@@ -142,7 +139,7 @@ export function WalkPreferenceStep({
               selected ? "border-primary" : "border-transparent",
             )}
           >
-            <WalkPreferenceIcon name={option.icon} />
+            <ActivityLevelIcon name={option.icon} />
 
             <View className="flex-1">
               <Text className="text-label-lg text-text">
