@@ -83,15 +83,20 @@ export function CourseDetail({ selectionId }: { selectionId: number }) {
       <ScreenHeader title={title} />
       <ScrollView contentContainerClassName="gap-4 px-5 py-5 pb-10">
         <Text className="text-heading-sm text-text">{title}</Text>
-        <Button
-          variant="secondary"
-          size="lg"
-          className="w-full"
-          onPress={() => openCourseMap()}
-        >
-          {t("course.viewCourseOnMap")}
-        </Button>
-        <CourseItinerary course={course} onPlacePress={openCourseMap} />
+        <CourseItinerary
+          course={course}
+          onPlacePress={openCourseMap}
+          summaryAction={
+            <Button
+              variant="secondary"
+              size="lg"
+              className="w-full"
+              onPress={() => openCourseMap()}
+            >
+              {t("course.viewCourseOnMap")}
+            </Button>
+          }
+        />
       </ScrollView>
     </View>
   );
