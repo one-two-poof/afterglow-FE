@@ -261,10 +261,13 @@ function DaySection({
 export function CourseItinerary({
   course,
   onPlacePress,
+  summaryAction,
 }: {
   course: RecommendedCourse;
   /** 타임라인 노드 탭 시 해당 지점 마커로 호출(추천 패널 전용). 없으면 비대화형. */
   onPlacePress?: (marker: CourseMarker) => void;
+  /** 요약 통계 바로 아래에 표시할 선택적 액션. */
+  summaryAction?: React.ReactNode;
 }) {
   const { t } = useI18n();
   const { days, placeCount, distanceKm } = courseSummary(course);
@@ -301,6 +304,8 @@ export function CourseItinerary({
           label={t("course.totalDistance")}
         />
       </View>
+
+      {summaryAction}
 
       {course.daily_schedules.map((day, i) => (
         <DaySection

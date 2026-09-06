@@ -171,6 +171,7 @@
   "course.outdoor": "실외",
   "course.walkDifficulty": "도보 {{level}}/5",
   "course.viewOnMap": "{{name}} 지도에서 보기",
+  "course.viewCourseOnMap": "전체 코스 지도에서 보기",
   "course.distanceFromPrevious": "이전 지점서 {{distance}}km 이동",
   "course.treatmentScheduled": "시술 예정",
   "course.departure": "출발",
