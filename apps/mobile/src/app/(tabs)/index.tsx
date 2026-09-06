@@ -3,6 +3,7 @@ import { colors } from "@afterglow/tokens";
 import { Input, TagList } from "@afterglow/ui-native";
 import { toLatLng } from "@afterglow/utils";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 import {
   Crosshair,
   Flag,
@@ -18,6 +19,8 @@ import {
   ActivityIndicator,
   type ColorValue,
   Keyboard,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -42,6 +45,10 @@ import {
   type RoutePin,
 } from "@/components/MapLibreMap/types";
 import { getCurrentLocation } from "@/lib/location";
+import {
+  buildExternalMapUrl,
+  formatPlaceForClipboard,
+} from "@/lib/place-actions";
 import { fetchRouteLines, ROUTE_COLORS, type RouteLine } from "@/lib/route";
 import { TripPlanPanel } from "@/components/TripPlanPanel";
 import { useAccessToken } from "@/hooks/use-access-token";
@@ -457,6 +464,37 @@ export default function HomeScreen() {
     setRoutePlanOpen(true);
   };
 
+  const copySelectedPlace = async () => {
+    if (!detail?.detail) return;
+
+    try {
+      await Clipboard.setStringAsync(
+        formatPlaceForClipboard(detail.detail.title, detail.detail.description),
+      );
+      showToast(t("home.detail.copySuccess"));
+    } catch {
+      showToast(t("home.detail.copyFailed"));
+    }
+  };
+
+  const openSelectedPlaceInExternalMap = async () => {
+    if (!detail?.detail) return;
+
+    const platform =
+      Platform.OS === "ios" || Platform.OS === "android" ? Platform.OS : "web";
+    const url = buildExternalMapUrl(platform, {
+      latitude: detail.lat,
+      longitude: detail.lng,
+      label: detail.detail.title,
+    });
+
+    try {
+      await Linking.openURL(url);
+    } catch {
+      showToast(t("home.detail.externalMapFailed"));
+    }
+  };
+
   // 설정 패널 닫기(경로 안내 취소). 상세 카드는 그대로 두어 다시 열 수 있게 한다.
   const closeRoutePlan = () => {
     cancelRoute();
@@ -786,6 +824,8 @@ export default function HomeScreen() {
           onExpandedChange={setPlaceDetailExpanded}
           onClose={closeDetail}
           onRoutePress={openRoutePlan}
+          onCopyPress={() => void copySelectedPlace()}
+          onExternalMapPress={() => void openSelectedPlaceInExternalMap()}
         />
       )}
 

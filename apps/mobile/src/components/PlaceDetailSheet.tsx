@@ -1,5 +1,5 @@
 import { colors } from "@afterglow/tokens";
-import { Navigation, Phone, X } from "lucide-react-native";
+import { Copy, ExternalLink, Navigation, Phone, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import {
   Animated,
@@ -22,6 +22,8 @@ interface PlaceDetailSheetProps {
   onExpandedChange: (expanded: boolean) => void;
   onClose: () => void;
   onRoutePress: () => void;
+  onCopyPress: () => void;
+  onExternalMapPress: () => void;
 }
 
 const COLLAPSED_CONTENT_HEIGHT = 148;
@@ -33,6 +35,8 @@ export function PlaceDetailSheet({
   onExpandedChange,
   onClose,
   onRoutePress,
+  onCopyPress,
+  onExternalMapPress,
 }: PlaceDetailSheetProps) {
   const { t } = useI18n();
   const { height: windowHeight } = useWindowDimensions();
@@ -199,6 +203,30 @@ export function PlaceDetailSheet({
                 </View>
               ) : null}
             </ScrollView>
+            <View className="mx-5 mb-2 flex-row gap-2">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("home.detail.copyPlace")}
+                onPress={onCopyPress}
+                className="h-11 flex-1 flex-row items-center justify-center gap-2 rounded-[8px] border border-border bg-surface active:bg-surface-muted"
+              >
+                <Copy size={16} color={colors["text-secondary"]} />
+                <Text className="text-label-md text-text">
+                  {t("home.detail.copyPlace")}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("home.detail.openExternalMap")}
+                onPress={onExternalMapPress}
+                className="h-11 flex-1 flex-row items-center justify-center gap-2 rounded-[8px] border border-border bg-surface active:bg-surface-muted"
+              >
+                <ExternalLink size={16} color={colors["text-secondary"]} />
+                <Text className="text-label-md text-text">
+                  {t("home.detail.openExternalMap")}
+                </Text>
+              </Pressable>
+            </View>
             {routeButton}
           </>
         ) : (
