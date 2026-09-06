@@ -30,3 +30,4 @@ pnpm-debug.log*
 **/artifacts/map-performance/
 
 /claude
+.expo/dev/logs/start.log
