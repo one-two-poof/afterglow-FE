@@ -3,7 +3,7 @@ import { addDays, formatISODate, type DateRange } from "@afterglow/utils";
 import type { TripPlanPayload } from "./types";
 
 /**
- * 폼 선택 값을 제출 페이로드 형태로 조립. 웹 payload.ts와 동일(순수 함수).
+ * 폼 선택 값을 제출 페이로드 형태로 조립(순수 함수).
  * 필수 값(여행 기간)이 없으면 null. date-utils는 PR 9에서 승격된 @afterglow/utils 사용.
  */
 export const buildTripPlanPayload = (

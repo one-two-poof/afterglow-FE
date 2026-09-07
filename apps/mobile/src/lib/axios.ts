@@ -1,5 +1,5 @@
 /**
- * 공용 axios 클라이언트 + 인터셉터. (웹 apps/web/src/lib/axios.ts의 앱 버전)
+ * 공용 axios 클라이언트 + 인터셉터.
  * - 요청: 액세스 토큰이 있으면 Bearer 헤더로 자동 첨부 (토큰 조회는 PR 18에서 구현)
  * - 응답: 401/403은 UnauthorizedError로, 그 외 실패는 상태코드를 담은 Error로 정규화
  *

@@ -1,7 +1,7 @@
 /**
  * 앱 인증 유틸 (axios 인터셉터 · MyPage가 사용).
  *
- * 로그인은 웹과 동일한 **백엔드 OAuth2 리다이렉트** 방식이다(Spring Security).
+ * 로그인은 **백엔드 OAuth2 리다이렉트** 방식이다(Spring Security).
  * 백엔드가 Google 인증 전 과정을 서버에서 처리하고, 최종적으로 토큰을 URL 쿼리로
  * 돌려준다. 앱은 인앱 브라우저로 로그인 URL을 열고, 백엔드가 앱 딥링크
  * `afterglow://oauth/callback?token=...` 로 리다이렉트하면 그 URL에서 token을 꺼낸다.
@@ -28,10 +28,10 @@ const ACCESS_TOKEN_KEY = "accessToken";
  */
 const OAUTH_REDIRECT_URI = "afterglow://oauth/callback";
 
-/** 백엔드 OAuth2 로그인 진입 경로(웹과 동일). GET 진입 → 서버가 Google로 리다이렉트. */
+/** 백엔드 OAuth2 로그인 진입 경로. GET 진입 → 서버가 Google로 리다이렉트. */
 const GOOGLE_LOGIN_PATH = "api/auth/login/google";
 
-/** 로그인 사용자 정보 (GET /api/auth/me 응답, 웹과 동일) */
+/** 로그인 사용자 정보 (GET /api/auth/me 응답) */
 export interface AuthUser {
   id: number;
   name: string;
@@ -42,7 +42,7 @@ export interface AuthUser {
   createdAt?: string;
 }
 
-/** 401/403 등 인증 실패를 일반 에러와 구분하기 위한 타입 (웹과 동일) */
+/** 401/403 등 인증 실패를 일반 에러와 구분하기 위한 타입 */
 export class UnauthorizedError extends Error {
   constructor(message = "Unauthorized") {
     super(message);
@@ -123,7 +123,7 @@ const buildApiUrl = (path: string): string => {
  * @throws  응답에 token이 없으면 Error (호출부에서 토스트로 안내)
  */
 export const startGoogleLogin = async (): Promise<boolean> => {
-  // 웹과 동일하게 로그인 진입 URL만 연다(별도 파라미터 없음). 백엔드가 모바일
+  // 로그인 진입 URL만 연다(별도 파라미터 없음). 백엔드가 모바일
   // 요청을 앱 딥링크(OAUTH_REDIRECT_URI)로 리다이렉트하도록 설정돼 있다.
   const loginUrl = buildApiUrl(GOOGLE_LOGIN_PATH);
 

@@ -39,7 +39,7 @@ export interface TripPlanForm {
 }
 
 /**
- * 여행 계획 폼의 상태·핸들러·단계 구성을 소유한다. 웹 use-trip-plan-form과 동일 로직.
+ * 여행 계획 폼의 상태·핸들러·단계 구성을 소유한다.
  * 패널 컴포넌트는 이 훅이 준 steps/reset/buildPayload만 사용한다.
  *
  * 각 단계 content는 현재 PR 10 자리표시자를 렌더한다. 실제 스텝 UI는 PR 11·12에서

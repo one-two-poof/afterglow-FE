@@ -13,7 +13,7 @@ import { MyCourseSkeleton } from "./MyCourseSkeleton";
 import { SavedCourseCard } from "./SavedCourseCard";
 
 /**
- * 내 코스 컨테이너. 웹 MyCourse의 RN 버전.
+ * 내 코스 컨테이너.
  * 흐름: 토큰 확인 → 없으면 로그인 안내 / 있으면 저장 코스 조회 후 렌더.
  * 토큰이 만료(401/403)면 토큰을 정리해 자동으로 로그인 화면으로 전환한다.
  *

@@ -17,7 +17,7 @@ import { ProfileHeader } from "./ProfileHeader";
 import { SettingsList } from "./SettingsList";
 
 /**
- * 내 정보 컨테이너. 웹 MyPage의 RN 버전.
+ * 내 정보 컨테이너.
  * 흐름: 토큰 확인 → 없으면 로그인 안내 / 있으면 내 정보 조회 후 렌더.
  * 토큰 만료(401/403)면 정리해 로그인 화면으로 전환.
  *

@@ -73,7 +73,7 @@ import {
 // 카테고리 태그는 PlaceCategory 문자열을 값으로 쓴다.
 const FILTER_ALL = "all";
 
-// 지도 카테고리 필터 태그 (웹 홈과 동일). "전체"는 필터 해제.
+// 지도 카테고리 필터 태그. "전체"는 필터 해제.
 const PLACE_CATEGORIES: PlaceCategory[] = [
   "hospital",
   "attraction",
@@ -180,7 +180,7 @@ const resolveMarkerAddress = async (marker: MapMarker) => {
 
 /**
  * 홈 = 전체화면 지도 + 상단 검색 오버레이 + 하단 카테고리/코스 태그 + 여행 계획(+)
- * 버튼 (웹 홈과 동일 구조).
+ * 버튼.
  *
  * 검색: 입력을 300ms 디바운스해 /api/places 조회, 결과를 지도 위 드롭다운으로.
  * 태그: 카테고리(병원/관광명소/숙소) 또는 저장 코스를 고르면 해당 지점들을 마커로.
@@ -258,7 +258,7 @@ export default function HomeScreen() {
     enabled: searchEnabled,
   });
 
-  // 저장된 내 코스 — 로그인 상태에서만 조회 (하단 태그로 표시). 웹 홈과 동일.
+  // 저장된 내 코스 — 로그인 상태에서만 조회 (하단 태그로 표시).
   const token = useAccessToken();
   const isAuthed = typeof token === "string";
   const { data: courses = [], refetch: refetchCourses } =
@@ -831,7 +831,7 @@ export default function HomeScreen() {
 
       {/* 하단 태그: 카테고리(전체/병원/관광명소/숙소) + 저장 코스(로그인 시).
           카테고리를 고르면 그 카테고리 장소를, 코스를 고르면 코스 지점들을 마커로
-          찍는다. "전체"는 모든 마커 해제. 웹 홈처럼 지도 맨 하단에 둔다. */}
+          찍는다. "전체"는 모든 마커 해제. 지도 맨 하단에 둔다. */}
       <View
         pointerEvents="box-none"
         className="absolute inset-x-0 bottom-0 gap-3"

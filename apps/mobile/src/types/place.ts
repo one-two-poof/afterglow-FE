@@ -2,7 +2,7 @@
  * 장소 API(GET /api/places) 응답 아이템 (백엔드 계약).
  * 숙소·병원·관광지 등 코스에 사용할 수 있는 장소 엔티티.
  *
- * 웹 apps/web/src/types/place.ts와 동일. 향후 공유가 늘면 packages/types로 승격 고려.
+ * 향후 공유가 늘면 packages/types로 승격 고려.
  */
 export interface Place {
   id: number;
