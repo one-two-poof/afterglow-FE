@@ -9,10 +9,11 @@ type TourismMapPlace = Pick<
   | "addressName"
   | "mapX"
   | "mapY"
-  | "image"
-  | "phone"
-  | "primaryTypeName"
->;
+> & {
+  image: string | null;
+  phone: string | null;
+  primaryTypeName: string | null;
+};
 
 export function tourismPlaceToMapParams(place: TourismMapPlace) {
   return {
@@ -23,8 +24,8 @@ export function tourismPlaceToMapParams(place: TourismMapPlace) {
     tourismPlaceAddress: place.addressName,
     tourismPlaceLat: String(place.mapY),
     tourismPlaceLng: String(place.mapX),
-    tourismPlaceImage: place.image,
-    tourismPlacePhone: place.phone,
-    tourismPlacePrimaryTypeName: place.primaryTypeName,
+    tourismPlaceImage: place.image ?? "",
+    tourismPlacePhone: place.phone ?? "",
+    tourismPlacePrimaryTypeName: place.primaryTypeName ?? "",
   };
 }

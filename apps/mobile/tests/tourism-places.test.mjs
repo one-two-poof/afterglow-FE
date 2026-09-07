@@ -41,6 +41,35 @@ test("creates home map params for a tourism place", () => {
   );
 });
 
+test("uses empty map params for optional tourism detail fields", () => {
+  assert.deepEqual(
+    tourismPlaceToMapParams({
+      id: 12,
+      placeType: "ATTRACTION",
+      placeName: "경복궁",
+      categoryName: "문화시설",
+      addressName: "서울 종로구",
+      mapX: 126.977,
+      mapY: 37.578,
+      image: null,
+      phone: null,
+      primaryTypeName: null,
+    }),
+    {
+      tourismPlaceId: "12",
+      tourismPlaceType: "ATTRACTION",
+      tourismPlaceName: "경복궁",
+      tourismPlaceCategory: "문화시설",
+      tourismPlaceAddress: "서울 종로구",
+      tourismPlaceLat: "37.578",
+      tourismPlaceLng: "126.977",
+      tourismPlaceImage: "",
+      tourismPlacePhone: "",
+      tourismPlacePrimaryTypeName: "",
+    },
+  );
+});
+
 test("keeps only places whose source includes the Tourism API", () => {
   const places = [
     { id: 1, source: "CSV" },
