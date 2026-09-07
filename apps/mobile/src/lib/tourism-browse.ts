@@ -7,6 +7,16 @@ export type TourismBrowseCategory =
   | "accommodation";
 export type TourismPlaceCategory = Exclude<TourismBrowseCategory, "all">;
 
+export function filterTourismApiPlaces<T extends Pick<Place, "source">>(
+  places: T[],
+): T[] {
+  return places.filter((place) =>
+    place.source
+      .split("+")
+      .some((source) => source.trim().toUpperCase() === "TOURISM_API"),
+  );
+}
+
 export function getTourismBrowseCategories(
   category: TourismBrowseCategory,
 ): TourismPlaceCategory[] {

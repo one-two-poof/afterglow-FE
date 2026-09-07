@@ -4,6 +4,7 @@ import {
   fetchHospitals,
 } from "@/lib/places";
 import {
+  filterTourismApiPlaces,
   getTourismBrowseCategories,
   mergeTourismPlaces,
   normalizeTourismSearch,
@@ -33,5 +34,5 @@ export async function fetchTourismPlaces(
       TOURISM_FETCHERS[item](name),
     ),
   );
-  return mergeTourismPlaces(groups);
+  return filterTourismApiPlaces(mergeTourismPlaces(groups));
 }

@@ -12,7 +12,13 @@ export function useTourismPlaces(
   search: string,
 ) {
   return useQuery({
-    queryKey: ["places", "tourism", category, search.trim()],
+    queryKey: [
+      "places",
+      "tourism",
+      "TOURISM_API",
+      category,
+      search.trim(),
+    ],
     queryFn: () => fetchTourismPlaces(category, search),
     staleTime: ONE_DAY_MS,
     gcTime: ONE_DAY_MS,

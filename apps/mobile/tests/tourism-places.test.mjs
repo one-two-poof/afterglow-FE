@@ -2,10 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  filterTourismApiPlaces,
   getTourismBrowseCategories,
   mergeTourismPlaces,
   normalizeTourismSearch,
 } from "../src/lib/tourism-browse.ts";
+
+test("keeps only places whose source includes the Tourism API", () => {
+  const places = [
+    { id: 1, source: "CSV" },
+    { id: 2, source: "KAKAO_API" },
+    { id: 3, source: "TOURISM_API" },
+    { id: 4, source: "TOURISM_API+KAKAO" },
+    { id: 5, source: "NOT_TOURISM_API" },
+  ];
+
+  assert.deepEqual(
+    filterTourismApiPlaces(places).map(({ id }) => id),
+    [3, 4],
+  );
+});
 
 test("browses every tourism-backed category when all is selected", () => {
   assert.deepEqual(getTourismBrowseCategories("all"), [
