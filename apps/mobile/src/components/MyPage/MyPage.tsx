@@ -1,6 +1,7 @@
 import { useToastStore } from "@afterglow/stores";
 import { Button } from "@afterglow/ui-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,20 +12,20 @@ import { clearAccessToken, UnauthorizedError } from "@/lib/auth";
 import { deleteMe } from "@/lib/me";
 import { useI18n } from "@/i18n/i18n-provider";
 
-import { LoginPrompt } from "./LoginPrompt";
 import { MyPageSkeleton } from "./MyPageSkeleton";
 import { ProfileHeader } from "./ProfileHeader";
 import { SettingsList } from "./SettingsList";
 
 /**
  * 내 정보 컨테이너.
- * 흐름: 토큰 확인 → 없으면 로그인 안내 / 있으면 내 정보 조회 후 렌더.
- * 토큰 만료(401/403)면 정리해 로그인 화면으로 전환.
- *
- * TODO(PR 18): 토큰 스텁(항상 null)이라 현재는 로그인 안내가 뜬다.
+ * 흐름: 토큰 확인 → 로그인 여부와 무관하게 화면을 보여준다.
+ * - 미로그인: 게스트 헤더 + 설정 목록(고객센터·이용약관 등) + "로그인하기"
+ * - 로그인: 내 정보 조회 후 프로필 + 설정 + 로그아웃/회원 탈퇴
+ * 토큰 만료(401/403)면 정리해 미로그인 상태로 전환.
  */
 export function MyPage() {
   const { t } = useI18n();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const showToast = useToastStore((state) => state.show);
   const token = useAccessToken();
@@ -79,10 +80,20 @@ export function MyPage() {
       </SafeAreaView>
     );
   }
+  // 미로그인: 게스트 헤더 + 설정 목록 + "로그인하기" (고객센터·이용약관은 로그인 없이 접근)
   if (token === null) {
     return (
       <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
-        <LoginPrompt />
+        <ScrollView>
+          <ProfileHeader />
+          <SettingsList
+            isAuthed={false}
+            onLogin={() => router.push("/login")}
+            onLogout={handleLogout}
+            onDeleteAccount={handleDeleteAccount}
+            isDeletingAccount={deleteAccountMutation.isPending}
+          />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -120,6 +131,8 @@ export function MyPage() {
       <ScrollView>
         <ProfileHeader user={data} />
         <SettingsList
+          isAuthed
+          onLogin={() => router.push("/login")}
           onLogout={handleLogout}
           onDeleteAccount={handleDeleteAccount}
           isDeletingAccount={deleteAccountMutation.isPending}

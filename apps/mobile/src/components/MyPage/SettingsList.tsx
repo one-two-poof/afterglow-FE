@@ -14,7 +14,16 @@ interface SettingsItem {
   href?: Href;
   onPress?: () => void;
   destructive?: boolean;
+  /** 강조(액션) 색으로 표시 — 로그인하기 등 */
+  accent?: boolean;
   disabled?: boolean;
+}
+
+/** 아이템 톤에 따른 텍스트/아이콘 색 */
+function toneColor(item: SettingsItem) {
+  if (item.destructive) return colors.error;
+  if (item.accent) return colors["action-primary"];
+  return colors["text-muted"];
 }
 
 function SettingsRow({
@@ -42,7 +51,9 @@ function SettingsRow({
         <Text
           className={cn(
             "text-label-lg",
-            item.destructive ? "text-error" : "text-text",
+            item.destructive && "text-error",
+            item.accent && "text-action-primary",
+            !item.destructive && !item.accent && "text-text",
           )}
         >
           {item.title}
@@ -51,10 +62,7 @@ function SettingsRow({
           {item.description}
         </Text>
       </View>
-      <ChevronRight
-        size={20}
-        color={item.destructive ? colors.error : colors["text-muted"]}
-      />
+      <ChevronRight size={20} color={toneColor(item)} />
     </Pressable>
   );
 }
@@ -73,12 +81,20 @@ function Group({ items }: { items: SettingsItem[] }) {
   );
 }
 
-/** 설정 목록 + 로그아웃/회원 탈퇴. */
+/**
+ * 설정 목록.
+ * - 로그인 상태: 하단에 로그아웃 / 회원 탈퇴
+ * - 미로그인 상태: 하단에 "로그인하기"(로그아웃과 같은 행 디자인, 강조색)
+ */
 export function SettingsList({
+  isAuthed,
+  onLogin,
   onLogout,
   onDeleteAccount,
   isDeletingAccount,
 }: {
+  isAuthed: boolean;
+  onLogin: () => void;
   onLogout: () => void;
   onDeleteAccount: () => void;
   isDeletingAccount: boolean;
@@ -112,27 +128,41 @@ export function SettingsList({
       {menuGroups.map((group, i) => (
         <Group key={i} items={group} />
       ))}
-      <Group
-        items={[
-          {
-            key: "logout",
-            title: t("settings.logout"),
-            description: t("settings.logoutDescription"),
-            onPress: onLogout,
-            destructive: true,
-          },
-          {
-            key: "delete-account",
-            title: t("settings.deleteAccount"),
-            description: isDeletingAccount
-              ? t("settings.deletingAccount")
-              : t("settings.deleteAccountDescription"),
-            onPress: onDeleteAccount,
-            destructive: true,
-            disabled: isDeletingAccount,
-          },
-        ]}
-      />
+      {isAuthed ? (
+        <Group
+          items={[
+            {
+              key: "logout",
+              title: t("settings.logout"),
+              description: t("settings.logoutDescription"),
+              onPress: onLogout,
+              destructive: true,
+            },
+            {
+              key: "delete-account",
+              title: t("settings.deleteAccount"),
+              description: isDeletingAccount
+                ? t("settings.deletingAccount")
+                : t("settings.deleteAccountDescription"),
+              onPress: onDeleteAccount,
+              destructive: true,
+              disabled: isDeletingAccount,
+            },
+          ]}
+        />
+      ) : (
+        <Group
+          items={[
+            {
+              key: "login",
+              title: t("settings.login"),
+              description: t("settings.loginDescription"),
+              onPress: onLogin,
+              accent: true,
+            },
+          ]}
+        />
+      )}
     </View>
   );
 }
