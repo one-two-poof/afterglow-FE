@@ -44,3 +44,33 @@ export interface Place {
   /** 데이터 결측(N/A) 여부 */
   isNa: boolean;
 }
+
+export type PlaceExtraInfo = Record<string, string | number | boolean | null>;
+
+/** GET /api/places/:id 상세 응답. 장소 유형에 따라 extraInfo 키가 달라진다. */
+export interface PlaceDetail {
+  id: number;
+  placeId: string | null;
+  tourismContentId: string | null;
+  placeName: string;
+  categoryName: string;
+  addressName: string;
+  mapX: number;
+  mapY: number;
+  image: string | null;
+  phone: string | null;
+  placeUrl: string | null;
+  source: string;
+  placeType: string;
+  primaryTypeName: string | null;
+  skinTreatmentConfidence: string | null;
+  skinTreatmentSignals: string | null;
+  isIndoor: boolean | null;
+  isHeatSource: boolean | null;
+  isMassageSpot: boolean | null;
+  walkHard: number | null;
+  overview: string | null;
+  images: string[] | null;
+  extraInfo: PlaceExtraInfo | null;
+  popularity: number | null;
+}

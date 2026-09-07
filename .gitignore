@@ -16,6 +16,7 @@ coverage
 
 # misc
 .DS_Store
+*.md
 *.pem
 *.tsbuildinfo
 next-env.d.ts

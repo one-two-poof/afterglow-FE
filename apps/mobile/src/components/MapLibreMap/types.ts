@@ -2,6 +2,8 @@ import type { RouteLine } from "@/lib/route";
 
 /** 마커 클릭 시 하단 카드에 표시할 상세 정보. */
 export interface MarkerDetail {
+  /** Backend place identifier used to load the full detail payload. */
+  id?: number;
   title: string;
   /** 카테고리·방문순서 등 보조 라인 */
   subtitle?: string;
