@@ -4,6 +4,7 @@ interface ExternalMapDestination {
   latitude: number;
   longitude: number;
   label: string;
+  address?: string;
 }
 
 interface ClipboardModule {
@@ -27,7 +28,7 @@ export async function copyPlaceToClipboard(
 
 export function buildMapUrl(
   provider: MapProvider,
-  { latitude, longitude, label }: ExternalMapDestination,
+  { latitude, longitude, label, address }: ExternalMapDestination,
 ) {
   const coordinates = `${latitude},${longitude}`;
 
@@ -37,11 +38,8 @@ export function buildMapUrl(
   }
 
   if (provider === "naver") {
-    return (
-      `nmap://place?lat=${latitude}&lng=${longitude}` +
-      `&name=${encodeURIComponent(label)}` +
-      "&appname=com.dunaduneos.afterglow"
-    );
+    const searchQuery = address ? `${label} ${address}` : label;
+    return `nmap://search?query=${encodeURIComponent(searchQuery)}&appname=com.dunaduneos.afterglow`;
   }
 
   if (provider === "kakao") {

@@ -528,10 +528,14 @@ export default function HomeScreen() {
   const openSelectedPlaceInExternalMap = async () => {
     if (!detail?.detail) return;
 
+    const address =
+      detail.detail.address ??
+      (await resolveMarkerAddress(detail).catch(() => undefined));
     const destination = {
       latitude: detail.lat,
       longitude: detail.lng,
       label: detail.detail.title,
+      address,
     };
     const openProvider = async (provider: MapProvider) => {
       try {

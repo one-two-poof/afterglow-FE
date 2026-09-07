@@ -52,25 +52,26 @@ test("builds a Google Maps universal URL that searches by place name", () => {
   );
 });
 
-test("builds a Naver Map app URL", () => {
+test("builds a Naver Map search URL with the place name and address", () => {
   assert.equal(
     buildMapUrl("naver", {
       latitude: 37.579617,
       longitude: 126.977041,
       label: "경복궁",
+      address: "서울 종로구 사직로 161",
     }),
-    "nmap://place?lat=37.579617&lng=126.977041&name=%EA%B2%BD%EB%B3%B5%EA%B6%81&appname=com.dunaduneos.afterglow",
+    "nmap://search?query=%EA%B2%BD%EB%B3%B5%EA%B6%81%20%EC%84%9C%EC%9A%B8%20%EC%A2%85%EB%A1%9C%EA%B5%AC%20%EC%82%AC%EC%A7%81%EB%A1%9C%20161&appname=com.dunaduneos.afterglow",
   );
 });
 
-test("encodes spaces in Naver Map place names as percent escapes", () => {
+test("builds a Naver Map search URL with only the place name when address is missing", () => {
   assert.equal(
     buildMapUrl("naver", {
       latitude: 37.528529,
       longitude: 127.040069,
       label: "갤러리아백화점 명품관",
     }),
-    "nmap://place?lat=37.528529&lng=127.040069&name=%EA%B0%A4%EB%9F%AC%EB%A6%AC%EC%95%84%EB%B0%B1%ED%99%94%EC%A0%90%20%EB%AA%85%ED%92%88%EA%B4%80&appname=com.dunaduneos.afterglow",
+    "nmap://search?query=%EA%B0%A4%EB%9F%AC%EB%A6%AC%EC%95%84%EB%B0%B1%ED%99%94%EC%A0%90%20%EB%AA%85%ED%92%88%EA%B4%80&appname=com.dunaduneos.afterglow",
   );
 });
 
