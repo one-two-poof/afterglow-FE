@@ -10,6 +10,7 @@ const CATEGORIES: TourismBrowseCategory[] = [
   "all",
   "attraction",
   "accommodation",
+  "hospital",
 ];
 
 export function TourismInfoHeader({
@@ -58,7 +59,10 @@ export function TourismInfoHeader({
       <Text className="mt-5 mb-2 text-label-sm text-text-secondary">
         {t("tourism.category.label")}
       </Text>
-      <View accessibilityRole="radiogroup" className="flex-row gap-2">
+      <View
+        accessibilityRole="radiogroup"
+        className="flex-row flex-wrap gap-2"
+      >
         {CATEGORIES.map((item) => {
           const selected = item === category;
           return (

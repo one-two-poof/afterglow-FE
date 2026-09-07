@@ -1,12 +1,18 @@
 import type { Place } from "@/types/place";
 
-export type TourismBrowseCategory = "all" | "attraction" | "accommodation";
+export type TourismBrowseCategory =
+  | "all"
+  | "hospital"
+  | "attraction"
+  | "accommodation";
 export type TourismPlaceCategory = Exclude<TourismBrowseCategory, "all">;
 
 export function getTourismBrowseCategories(
   category: TourismBrowseCategory,
 ): TourismPlaceCategory[] {
-  return category === "all" ? ["attraction", "accommodation"] : [category];
+  return category === "all"
+    ? ["hospital", "attraction", "accommodation"]
+    : [category];
 }
 
 export function normalizeTourismSearch(search: string): string {

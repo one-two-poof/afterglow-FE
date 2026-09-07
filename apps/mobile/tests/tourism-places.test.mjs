@@ -7,8 +7,9 @@ import {
   normalizeTourismSearch,
 } from "../src/lib/tourism-browse.ts";
 
-test("browses attractions and accommodations when all is selected", () => {
+test("browses every tourism-backed category when all is selected", () => {
   assert.deepEqual(getTourismBrowseCategories("all"), [
+    "hospital",
     "attraction",
     "accommodation",
   ]);
@@ -19,6 +20,7 @@ test("browses only the selected tourism category", () => {
   assert.deepEqual(getTourismBrowseCategories("accommodation"), [
     "accommodation",
   ]);
+  assert.deepEqual(getTourismBrowseCategories("hospital"), ["hospital"]);
 });
 
 test("uses the backend match-all value for a blank search", () => {

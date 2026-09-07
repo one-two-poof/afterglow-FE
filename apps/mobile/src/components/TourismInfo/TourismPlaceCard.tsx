@@ -15,12 +15,17 @@ export function TourismPlaceCard({
 }) {
   const { t } = useI18n();
   const address = place.roadAddressName || place.addressName;
+  const normalizedPlaceType = place.placeType.toUpperCase();
+  const fallbackCategory =
+    normalizedPlaceType === "HOSPITAL"
+      ? t("tourism.category.hospital")
+      : normalizedPlaceType === "ACCOMMODATION"
+        ? t("tourism.category.accommodation")
+        : t("tourism.category.attraction");
   const category =
     place.primaryTypeName ||
     place.categoryName ||
-    (place.placeType.toUpperCase() === "ACCOMMODATION"
-      ? t("tourism.category.accommodation")
-      : t("tourism.category.attraction"));
+    fallbackCategory;
 
   return (
     <Pressable

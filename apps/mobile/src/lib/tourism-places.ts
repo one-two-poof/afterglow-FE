@@ -1,4 +1,8 @@
-import { fetchAccommodations, fetchAttractions } from "@/lib/places";
+import {
+  fetchAccommodations,
+  fetchAttractions,
+  fetchHospitals,
+} from "@/lib/places";
 import {
   getTourismBrowseCategories,
   mergeTourismPlaces,
@@ -14,6 +18,7 @@ const TOURISM_FETCHERS: Record<
   TourismPlaceCategory,
   (name?: string) => Promise<Place[]>
 > = {
+  hospital: fetchHospitals,
   attraction: fetchAttractions,
   accommodation: fetchAccommodations,
 };
