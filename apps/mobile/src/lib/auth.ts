@@ -31,6 +31,21 @@ const OAUTH_REDIRECT_URI = "afterglow://oauth/callback";
 /** 백엔드 OAuth2 로그인 진입 경로. GET 진입 → 서버가 Google로 리다이렉트. */
 const GOOGLE_LOGIN_PATH = "api/auth/login/google";
 
+/**
+ * 백엔드 Apple 로그인 진입 경로. Google과 동일한 서버 리다이렉트 방식이다.
+ *
+ * NOTE: iOS 네이티브 Apple 로그인(expo-apple-authentication)으로 바꾸려면 이 상수
+ * 대신 네이티브 SDK로 identityToken을 받아 백엔드에 POST하도록 startAppleLogin만
+ * 교체하면 된다. 화면/버튼 UI는 그대로 재사용된다.
+ */
+const APPLE_LOGIN_PATH = "api/auth/login/apple";
+
+/** 자체(이메일) 로그인 경로. POST { email, password } → { token }. */
+const EMAIL_LOGIN_PATH = "api/auth/login";
+
+/** 자체(이메일) 회원가입 경로. POST { name, email, password } → { token }. */
+const EMAIL_SIGNUP_PATH = "api/auth/signup";
+
 /** 로그인 사용자 정보 (GET /api/auth/me 응답) */
 export interface AuthUser {
   id: number;
@@ -115,17 +130,15 @@ const buildApiUrl = (path: string): string => {
 };
 
 /**
- * Google 로그인 시작.
+ * 백엔드 OAuth2 리다이렉트 로그인 공통 처리(Google·Apple 공유).
  * 인앱 브라우저로 백엔드 로그인 URL을 열고, 백엔드가 `OAUTH_REDIRECT_URI`로
- * 토큰을 붙여 리다이렉트하면 그 URL을 받아 token을 저장한다.
+ * 토큰을 붙여 리다이렉트하면 그 URL에서 token을 꺼내 저장한다.
  *
  * @returns 로그인 성공 여부 (사용자가 취소하면 false)
  * @throws  응답에 token이 없으면 Error (호출부에서 토스트로 안내)
  */
-export const startGoogleLogin = async (): Promise<boolean> => {
-  // 로그인 진입 URL만 연다(별도 파라미터 없음). 백엔드가 모바일
-  // 요청을 앱 딥링크(OAUTH_REDIRECT_URI)로 리다이렉트하도록 설정돼 있다.
-  const loginUrl = buildApiUrl(GOOGLE_LOGIN_PATH);
+const startOAuthRedirectLogin = async (loginPath: string): Promise<boolean> => {
+  const loginUrl = buildApiUrl(loginPath);
 
   const result = await WebBrowser.openAuthSessionAsync(
     loginUrl,
@@ -145,3 +158,77 @@ export const startGoogleLogin = async (): Promise<boolean> => {
   await setAccessToken(token);
   return true;
 };
+
+/**
+ * Google 로그인 시작. 백엔드가 모바일 요청을 앱 딥링크로 리다이렉트한다.
+ * @returns 로그인 성공 여부 (사용자가 취소하면 false)
+ */
+export const startGoogleLogin = (): Promise<boolean> =>
+  startOAuthRedirectLogin(GOOGLE_LOGIN_PATH);
+
+/**
+ * Apple 로그인 시작. 현재는 Google과 동일한 백엔드 리다이렉트 방식이다.
+ * (네이티브 Apple 로그인으로의 교체 지점은 `APPLE_LOGIN_PATH` 주석 참고)
+ * @returns 로그인 성공 여부 (사용자가 취소하면 false)
+ */
+export const startAppleLogin = (): Promise<boolean> =>
+  startOAuthRedirectLogin(APPLE_LOGIN_PATH);
+
+/** 자체 로그인/회원가입 요청 본문에서 파생되는 토큰 응답 형태. */
+interface TokenResponse {
+  token: string;
+}
+
+/**
+ * 자체 인증 엔드포인트(POST)에 JSON을 보내고 { token }을 받아 저장한다.
+ * apiClient(lib/axios) 대신 fetch를 쓰는 이유: apiClient는 lib/auth를 import하므로
+ * 여기서 apiClient를 쓰면 순환 참조가 된다. 로그인 전이라 인증 헤더도 필요 없다.
+ *
+ * @throws 네트워크 실패 또는 4xx/5xx 응답 시 Error (호출부에서 토스트로 안내)
+ */
+const postCredentials = async (
+  path: string,
+  body: Record<string, string>,
+): Promise<void> => {
+  const response = await fetch(buildApiUrl(path), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new UnauthorizedError();
+    }
+    throw new Error(`인증 요청 실패 (${response.status})`);
+  }
+
+  const data = (await response.json()) as Partial<TokenResponse>;
+  if (typeof data.token !== "string" || data.token.length === 0) {
+    throw new Error("응답에 토큰이 없습니다.");
+  }
+
+  await setAccessToken(data.token);
+};
+
+/** 이메일·비밀번호로 로그인한다. 성공 시 토큰을 저장한다. */
+export const loginWithEmail = (params: {
+  email: string;
+  password: string;
+}): Promise<void> =>
+  postCredentials(EMAIL_LOGIN_PATH, {
+    email: params.email,
+    password: params.password,
+  });
+
+/** 이메일·비밀번호·이름으로 회원가입한다. 성공 시 바로 로그인 상태가 된다. */
+export const signUpWithEmail = (params: {
+  name: string;
+  email: string;
+  password: string;
+}): Promise<void> =>
+  postCredentials(EMAIL_SIGNUP_PATH, {
+    name: params.name,
+    email: params.email,
+    password: params.password,
+  });
