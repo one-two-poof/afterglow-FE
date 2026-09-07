@@ -6,7 +6,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useI18n } from "@/i18n/i18n-provider";
 
-import { FAQ_ITEMS, type FaqItem, SUPPORT_EMAIL } from "./support-content";
+import { type FaqItem, getFaqItems, SUPPORT_EMAIL } from "./support-content";
 
 /** 접었다 펼치는 FAQ 한 항목. 질문을 누르면 답변이 열린다. */
 function FaqRow({ item, isLast }: { item: FaqItem; isLast: boolean }) {
@@ -41,7 +41,8 @@ function FaqRow({ item, isLast }: { item: FaqItem; isLast: boolean }) {
  * 설정 목록의 "고객센터"에서 진입한다.
  */
 export function Support() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const faqItems = getFaqItems(locale);
   return (
     <View className="flex-1 bg-bg">
       <ScreenHeader title={t("support.title")} />
@@ -76,11 +77,11 @@ export function Support() {
         <View className="gap-3">
           <Text className="text-label-lg text-text">{t("support.faq")}</Text>
           <View className="overflow-hidden rounded-[16px] border border-border bg-surface">
-            {FAQ_ITEMS.map((item, i) => (
+            {faqItems.map((item, i) => (
               <FaqRow
                 key={item.q}
                 item={item}
-                isLast={i === FAQ_ITEMS.length - 1}
+                isLast={i === faqItems.length - 1}
               />
             ))}
           </View>
