@@ -23,7 +23,7 @@ interface PlaceDetailSheetProps {
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   onClose: () => void;
-  onRoutePress: () => void;
+  onRoutePress?: () => void;
   onCopyPress: () => void;
   onExternalMapPress: () => void;
 }
@@ -44,7 +44,8 @@ export function PlaceDetailSheet({
   const placeDetailQuery = usePlaceDetail(detail.id, detail.placeType);
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.min(windowHeight * 0.58, 520);
-  const collapsedOffset = Math.max(sheetHeight - COLLAPSED_CONTENT_HEIGHT, 0);
+  const collapsedContentHeight = onRoutePress ? COLLAPSED_CONTENT_HEIGHT : 100;
+  const collapsedOffset = Math.max(sheetHeight - collapsedContentHeight, 0);
   const [translateY] = useState(
     () => new Animated.Value(expanded ? 0 : collapsedOffset),
   );
@@ -106,7 +107,7 @@ export function PlaceDetailSheet({
     [collapsedOffset, expanded, translateY],
   );
 
-  const routeButton = (
+  const routeButton = onRoutePress ? (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={t("route.guide")}
@@ -118,7 +119,7 @@ export function PlaceDetailSheet({
         {t("route.guide")}
       </Text>
     </Pressable>
-  );
+  ) : null;
 
   return (
     <Animated.View
