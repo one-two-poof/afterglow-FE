@@ -8,6 +8,7 @@ import {
   getTourismBrowseCategories,
   mergeTourismPlaces,
   normalizeTourismSearch,
+  prioritizeTourismPlacesWithImages,
 } from "../src/lib/tourism-browse.ts";
 import { tourismPlaceToMapParams } from "../src/lib/tourism-place-navigation.ts";
 
@@ -84,6 +85,23 @@ test("maps the flat tourism filters to the required API category", () => {
 test("uses the backend match-all value for a blank search", () => {
   assert.equal(normalizeTourismSearch("   "), "%");
   assert.equal(normalizeTourismSearch("  경복궁  "), "경복궁");
+});
+
+test("shows tourism places with thumbnails before places without images", () => {
+  const noImageFirst = { id: 1, image: "" };
+  const imageFirst = { id: 2, image: "https://example.com/first.jpg" };
+  const noImageSecond = { id: 3, image: "   " };
+  const imageSecond = { id: 4, image: "https://example.com/second.jpg" };
+
+  assert.deepEqual(
+    prioritizeTourismPlacesWithImages([
+      noImageFirst,
+      imageFirst,
+      noImageSecond,
+      imageSecond,
+    ]),
+    [imageFirst, imageSecond, noImageFirst, noImageSecond],
+  );
 });
 
 test("merges category results without duplicate places", () => {

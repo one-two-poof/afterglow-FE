@@ -12,6 +12,7 @@ import { useI18n } from "@/i18n/i18n-provider";
 import {
   filterTourismAttractions,
   getTourismBrowseCategory,
+  prioritizeTourismPlacesWithImages,
   type TourismInfoCategory,
 } from "@/lib/tourism-browse";
 import type { Place } from "@/types/place";
@@ -28,13 +29,13 @@ export function TourismInfo() {
     isError,
     refetch,
   } = useTourismPlaces(getTourismBrowseCategory(category), debouncedSearch);
-  const visiblePlaces = useMemo(
-    () =>
+  const visiblePlaces = useMemo(() => {
+    const categoryPlaces =
       category === "hospital" || category === "accommodation"
         ? places
-        : filterTourismAttractions(places, category),
-    [category, places],
-  );
+        : filterTourismAttractions(places, category);
+    return prioritizeTourismPlacesWithImages(categoryPlaces);
+  }, [category, places]);
 
   const chooseCategory = (nextCategory: TourismInfoCategory) => {
     setCategory(nextCategory);

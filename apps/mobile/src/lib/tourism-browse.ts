@@ -1,26 +1,14 @@
 import type { Place } from "@/types/place";
 
 export type TourismBrowseCategory =
-  | "all"
-  | "hospital"
-  | "attraction"
-  | "accommodation";
+  "all" | "hospital" | "attraction" | "accommodation";
 export type TourismPlaceCategory = Exclude<TourismBrowseCategory, "all">;
 export type TourismAttractionCategory =
-  | "all"
-  | "culture"
-  | "nature"
-  | "shopping"
-  | "experience";
+  "all" | "culture" | "nature" | "shopping" | "experience";
 export type TourismInfoCategory =
-  | TourismAttractionCategory
-  | "accommodation"
-  | "hospital";
+  TourismAttractionCategory | "accommodation" | "hospital";
 
-type AttractionCategoryFields = Pick<
-  Place,
-  "primaryTypeName" | "categoryName"
->;
+type AttractionCategoryFields = Pick<Place, "primaryTypeName" | "categoryName">;
 
 const ATTRACTION_CATEGORY_PATTERNS: Array<{
   category: Exclude<TourismAttractionCategory, "all" | "experience">;
@@ -28,7 +16,8 @@ const ATTRACTION_CATEGORY_PATTERNS: Array<{
 }> = [
   {
     category: "culture",
-    pattern: /인문|문화|예술|역사|박물관|미술관|공연|영화|고궁|궁궐|유적|사찰|종교/i,
+    pattern:
+      /인문|문화|예술|역사|박물관|미술관|공연|영화|고궁|궁궐|유적|사찰|종교/i,
   },
   {
     category: "nature",
@@ -45,9 +34,8 @@ export function getTourismAttractionCategory(
 ): Exclude<TourismAttractionCategory, "all"> {
   const searchable = `${place.primaryTypeName} ${place.categoryName}`;
   return (
-    ATTRACTION_CATEGORY_PATTERNS.find(({ pattern }) =>
-      pattern.test(searchable),
-    )?.category ?? "experience"
+    ATTRACTION_CATEGORY_PATTERNS.find(({ pattern }) => pattern.test(searchable))
+      ?.category ?? "experience"
   );
 }
 
@@ -91,6 +79,16 @@ export function getTourismBrowseCategory(
 
 export function normalizeTourismSearch(search: string): string {
   return search.trim() || "%";
+}
+
+export function prioritizeTourismPlacesWithImages<
+  T extends Pick<Place, "image">,
+>(places: T[]): T[] {
+  const hasImage = (place: T) => Boolean(place.image?.trim());
+  return [
+    ...places.filter(hasImage),
+    ...places.filter((place) => !hasImage(place)),
+  ];
 }
 
 export function mergeTourismPlaces(groups: Place[][]): Place[] {
