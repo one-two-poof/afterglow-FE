@@ -2,7 +2,7 @@ import { useToastStore } from "@afterglow/stores";
 import { Input } from "@afterglow/ui-native";
 import { colors } from "@afterglow/tokens";
 import { useRouter } from "expo-router";
-import { Mail, User } from "lucide-react-native";
+import { Mail } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
@@ -15,7 +15,6 @@ import { SubmitButton } from "./SubmitButton";
 import { isValidEmail, MIN_PASSWORD_LENGTH } from "./validation";
 
 interface FormErrors {
-  name?: string;
   email?: string;
   password?: string;
   passwordConfirm?: string;
@@ -31,7 +30,6 @@ export function SignUp() {
   const router = useRouter();
   const showToast = useToastStore((s) => s.show);
 
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -44,7 +42,6 @@ export function SignUp() {
 
   const validate = () => {
     const next: FormErrors = {};
-    if (!name.trim()) next.name = t("signup.errorNameRequired");
     if (!email.trim()) next.email = t("login.errorEmailRequired");
     else if (!isValidEmail(email)) next.email = t("login.errorEmailInvalid");
     if (!password) next.password = t("login.errorPasswordRequired");
@@ -61,9 +58,9 @@ export function SignUp() {
     setIsSubmitting(true);
     try {
       await signUpWithEmail({
-        name: name.trim(),
         email: email.trim(),
         password,
+        passwordConfirm,
       });
       router.replace("/");
     } catch {
@@ -96,20 +93,6 @@ export function SignUp() {
     >
       <View className="gap-4">
         <Input
-          label={t("signup.nameLabel")}
-          placeholder={t("signup.namePlaceholder")}
-          value={name}
-          onChangeText={(text) => {
-            setName(text);
-            clearError("name");
-          }}
-          error={errors.name}
-          leftIcon={<User size={18} color={colors["text-muted"]} />}
-          autoCapitalize="words"
-          textContentType="name"
-          returnKeyType="next"
-        />
-        <Input
           label={t("login.emailLabel")}
           placeholder={t("login.emailPlaceholder")}
           value={email}
@@ -135,7 +118,8 @@ export function SignUp() {
             clearError("password");
           }}
           error={errors.password}
-          textContentType="newPassword"
+          textContentType="oneTimeCode"
+          autoComplete="off"
           returnKeyType="next"
         />
         <PasswordInput
@@ -147,7 +131,8 @@ export function SignUp() {
             clearError("passwordConfirm");
           }}
           error={errors.passwordConfirm}
-          textContentType="newPassword"
+          textContentType="oneTimeCode"
+          autoComplete="off"
           returnKeyType="done"
           onSubmitEditing={handleSignUp}
         />

@@ -51,6 +51,7 @@
   "login.errorEmailInvalid": "That doesn't look like a valid email.",
   "login.errorPasswordRequired": "Please enter your password.",
   "login.failed": "Sign-in failed. Please check your email and password.",
+  "login.socialFailed": "Social sign-in failed. Please try again in a moment.",
   "signup.title": "Sign up",
   "signup.subtitle": "Sign up with email\nand save your own travel courses.",
   "signup.nameLabel": "Name",

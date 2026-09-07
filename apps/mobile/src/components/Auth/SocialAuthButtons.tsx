@@ -1,4 +1,10 @@
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 
 import { useI18n } from "@/i18n/i18n-provider";
 
@@ -62,29 +68,32 @@ export function SocialAuthButtons({
           )}
         </Pressable>
 
-        {/* Apple: 검은 배경 + 흰 글자(Apple HIG 권장 스타일) */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{
-            disabled: disabled || loadingProvider !== null,
-            busy: loadingProvider === "apple",
-          }}
-          disabled={disabled || loadingProvider !== null}
-          onPress={onApple}
-          style={{ backgroundColor: "#000000" }}
-          className="gap-2 h-[48px] w-full flex-row items-center justify-center rounded-[8px] active:opacity-80"
-        >
-          {loadingProvider === "apple" ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <>
-              <AppleIcon color="#ffffff" />
-              <Text style={{ color: "#ffffff" }} className="text-label-lg">
-                {t("login.apple")}
-              </Text>
-            </>
-          )}
-        </Pressable>
+        {/* Apple: 검은 배경 + 흰 글자(Apple HIG 권장 스타일).
+            네이티브 Apple 로그인은 iOS 전용이므로 iOS에서만 노출한다. */}
+        {Platform.OS === "ios" && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{
+              disabled: disabled || loadingProvider !== null,
+              busy: loadingProvider === "apple",
+            }}
+            disabled={disabled || loadingProvider !== null}
+            onPress={onApple}
+            style={{ backgroundColor: "#000000" }}
+            className="gap-2 h-[48px] w-full flex-row items-center justify-center rounded-[8px] active:opacity-80"
+          >
+            {loadingProvider === "apple" ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <>
+                <AppleIcon color="#ffffff" />
+                <Text style={{ color: "#ffffff" }} className="text-label-lg">
+                  {t("login.apple")}
+                </Text>
+              </>
+            )}
+          </Pressable>
+        )}
       </View>
     </View>
   );

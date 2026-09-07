@@ -51,6 +51,7 @@
   "login.errorEmailInvalid": "メールアドレスの形式が正しくありません。",
   "login.errorPasswordRequired": "パスワードを入力してください。",
   "login.failed": "ログインできませんでした。メールアドレスとパスワードをご確認ください。",
+  "login.socialFailed": "ソーシャルログインに失敗しました。しばらくしてからもう一度お試しください。",
   "signup.title": "新規登録",
   "signup.subtitle": "メールで登録して\n自分だけの旅行コースを保存しましょう。",
   "signup.nameLabel": "名前",
