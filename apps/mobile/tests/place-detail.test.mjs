@@ -6,6 +6,7 @@ import {
   buildPlaceDetailFacts,
   getPlaceDetailImages,
   getSafeWebUrl,
+  normalizePlaceDetailText,
 } from "../src/lib/place-detail.ts";
 
 test("builds the backend place detail request with an uppercase place type", () => {
@@ -32,11 +33,6 @@ test("builds hospital facts and omits missing values", () => {
   assert.deepEqual(
     facts.map(({ key, value, format }) => ({ key, value, format })),
     [
-      {
-        key: "skinTreatmentConfidence",
-        value: "medium",
-        format: "confidence",
-      },
       { key: "skinTreatmentSignals", value: "필러", format: "text" },
       {
         key: "mainSubject",
@@ -62,7 +58,7 @@ test("builds hospital facts and omits missing values", () => {
   );
 });
 
-test("keeps false attraction flags because they are meaningful", () => {
+test("omits post-treatment recommendation and walking difficulty", () => {
   const facts = buildPlaceDetailFacts({
     placeType: "ATTRACTION",
     isIndoor: false,
@@ -76,13 +72,8 @@ test("keeps false attraction flags because they are meaningful", () => {
   });
 
   assert.deepEqual(
-    facts.slice(0, 4).map(({ key, value }) => ({ key, value })),
-    [
-      { key: "isIndoor", value: false },
-      { key: "isHeatSource", value: false },
-      { key: "isMassageSpot", value: false },
-      { key: "walkHard", value: 4 },
-    ],
+    facts.map(({ key }) => key),
+    ["isIndoor", "isHeatSource", "useTime", "restDate"],
   );
 });
 
@@ -109,4 +100,29 @@ test("only allows http and https homepage links", () => {
   assert.equal(getSafeWebUrl("http://example.com"), "http://example.com/");
   assert.equal(getSafeWebUrl("javascript:alert(1)"), undefined);
   assert.equal(getSafeWebUrl("not a url"), undefined);
+});
+
+test("upgrades Visit Korea image URLs to HTTPS for iOS", () => {
+  assert.deepEqual(
+    getPlaceDetailImages({
+      image:
+        "http://tong.visitkorea.or.kr/cms/resource/74/3566274_image2_1.jpg",
+      images: [
+        "http://tong.visitkorea.or.kr/cms/resource/75/3566275_image2_1.jpg",
+      ],
+    }),
+    [
+      "https://tong.visitkorea.or.kr/cms/resource/74/3566274_image2_1.jpg",
+      "https://tong.visitkorea.or.kr/cms/resource/75/3566275_image2_1.jpg",
+    ],
+  );
+});
+
+test("turns backend HTML into readable plain text", () => {
+  assert.equal(
+    normalizePlaceDetailText(
+      "<strong>문헌정보실</strong><br>- 평일 09:00~20:00<br />- 주말&nbsp;09:00~17:00",
+    ),
+    "문헌정보실\n- 평일 09:00~20:00\n- 주말 09:00~17:00",
+  );
 });

@@ -39,17 +39,6 @@ export function PlaceDetailFacts({ placeInfo }: { placeInfo: PlaceDetail }) {
           : "home.detail.value.unavailable",
       );
     }
-    if (fact.format === "confidence") {
-      const confidence = String(fact.value).toLowerCase();
-      if (["high", "medium", "low"].includes(confidence)) {
-        return t(
-          `home.detail.value.confidence.${confidence}` as TranslationKey,
-        );
-      }
-    }
-    if (fact.format === "difficulty") {
-      return t("home.detail.value.difficulty", { level: fact.value });
-    }
     return String(fact.value);
   };
 

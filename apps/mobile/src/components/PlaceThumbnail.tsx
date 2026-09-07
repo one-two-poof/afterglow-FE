@@ -3,18 +3,7 @@ import { useState } from "react";
 import { Image, View } from "react-native";
 
 import { PlaceDefaultIcon } from "@/components/PlaceDefaultIcon";
-
-const normalizePlaceImageUrl = (imageUrl?: string) => {
-  const trimmedUrl = imageUrl?.trim();
-  if (!trimmedUrl) {
-    return undefined;
-  }
-
-  const visitKoreaHttpPrefix = "http://tong.visitkorea.or.kr/";
-  return trimmedUrl.startsWith(visitKoreaHttpPrefix)
-    ? `https://${trimmedUrl.slice("http://".length)}`
-    : trimmedUrl;
-};
+import { normalizePlaceImageUrl } from "@/lib/place-detail";
 
 export interface PlaceThumbnailProps {
   imageUrl?: string;

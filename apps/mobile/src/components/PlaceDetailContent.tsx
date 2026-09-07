@@ -5,7 +5,10 @@ import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import type { MarkerDetail } from "@/components/MapLibreMap/types";
 import { PlaceDetailFacts } from "@/components/PlaceDetailFacts";
 import { useI18n } from "@/i18n/i18n-provider";
-import { getPlaceDetailImages } from "@/lib/place-detail";
+import {
+  getPlaceDetailImages,
+  normalizePlaceDetailText,
+} from "@/lib/place-detail";
 import type { PlaceDetail } from "@/types/place";
 
 interface PlaceDetailContentProps {
@@ -117,7 +120,7 @@ export function PlaceDetailContent({
             {t("home.detail.section.overview")}
           </Text>
           <Text className="text-body-md text-text-secondary">
-            {placeInfo.overview}
+            {normalizePlaceDetailText(placeInfo.overview)}
           </Text>
         </View>
       ) : null}

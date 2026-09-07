@@ -1,12 +1,9 @@
 import type { PlaceDetail } from "@/types/place";
 
 export type PlaceDetailFactKey =
-  | "skinTreatmentConfidence"
   | "skinTreatmentSignals"
   | "isIndoor"
   | "isHeatSource"
-  | "isMassageSpot"
-  | "walkHard"
   | "popularity"
   | "mainSubject"
   | "specialProcedure"
@@ -28,7 +25,7 @@ export type PlaceDetailFactKey =
   | "infoCenter";
 
 export type PlaceDetailFactFormat =
-  "text" | "boolean" | "availability" | "confidence" | "difficulty" | "link";
+  "text" | "boolean" | "availability" | "link";
 
 export interface PlaceDetailFact {
   key: PlaceDetailFactKey;
@@ -56,7 +53,6 @@ type FactDefinition = {
 
 const FACTS_BY_PLACE_TYPE: Record<string, FactDefinition[]> = {
   HOSPITAL: [
-    { key: "skinTreatmentConfidence", format: "confidence" },
     { key: "skinTreatmentSignals" },
     { key: "mainSubject", source: "extraInfo" },
     { key: "specialProcedure", source: "extraInfo" },
@@ -82,8 +78,6 @@ const FACTS_BY_PLACE_TYPE: Record<string, FactDefinition[]> = {
   ATTRACTION: [
     { key: "isIndoor", format: "boolean" },
     { key: "isHeatSource", format: "boolean" },
-    { key: "isMassageSpot", format: "boolean" },
-    { key: "walkHard", format: "difficulty" },
     { key: "popularity" },
     { key: "useTime", source: "extraInfo" },
     { key: "restDate", source: "extraInfo" },
@@ -98,20 +92,56 @@ const isPresent = (value: unknown): value is string | number | boolean =>
   typeof value === "number" ||
   (typeof value === "string" && value.trim().length > 0);
 
+const NAMED_HTML_ENTITIES: Record<string, string> = {
+  amp: "&",
+  apos: "'",
+  gt: ">",
+  lt: "<",
+  nbsp: " ",
+  quot: '"',
+};
+
+/** 관광 API의 간단한 HTML을 React Native Text에 맞는 평문으로 바꾼다. */
+export function normalizePlaceDetailText(value: string): string {
+  return value
+    .replace(/<!--[^]*?-->/g, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?[a-z][^>]*>/gi, "")
+    .replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (entity, code: string) => {
+      if (code[0] !== "#") {
+        return NAMED_HTML_ENTITIES[code.toLowerCase()] ?? entity;
+      }
+      const radix = code[1]?.toLowerCase() === "x" ? 16 : 10;
+      const digits = radix === 16 ? code.slice(2) : code.slice(1);
+      const point = Number.parseInt(digits, radix);
+      return Number.isFinite(point) ? String.fromCodePoint(point) : entity;
+    })
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export function buildPlaceDetailFacts(detail: DetailLike): PlaceDetailFact[] {
   const definitions =
     FACTS_BY_PLACE_TYPE[detail.placeType?.toUpperCase() ?? ""] ?? [];
 
   return definitions.flatMap((definition) => {
-    const source =
-      definition.source === "extraInfo" ? detail.extraInfo : detail;
-    const value = source?.[definition.key];
+    const rawValue =
+      definition.source === "extraInfo"
+        ? detail.extraInfo?.[definition.key]
+        : detail[definition.key as keyof DetailLike];
+    const value =
+      typeof rawValue === "string"
+        ? normalizePlaceDetailText(rawValue)
+        : rawValue;
     if (!isPresent(value)) return [];
 
     return [
       {
         key: definition.key,
-        value: typeof value === "string" ? value.trim() : value,
+        value,
         format: definition.format ?? "text",
       },
     ];
@@ -129,11 +159,26 @@ export function getPlaceDetailImages({
   return [
     ...new Set(
       candidates.flatMap((candidate) => {
-        const safeUrl = getSafeWebUrl(candidate);
+        const safeUrl = normalizePlaceImageUrl(candidate);
         return safeUrl ? [safeUrl] : [];
       }),
     ),
   ];
+}
+
+/** iOS에서 차단되는 관광공사 HTTP 이미지 주소를 HTTPS로 승격한다. */
+export function normalizePlaceImageUrl(value: unknown): string | undefined {
+  const safeUrl = getSafeWebUrl(value);
+  if (!safeUrl) return undefined;
+
+  const url = new URL(safeUrl);
+  if (
+    url.protocol === "http:" &&
+    url.hostname.toLowerCase() === "tong.visitkorea.or.kr"
+  ) {
+    url.protocol = "https:";
+  }
+  return url.toString();
 }
 
 export function getSafeWebUrl(value: unknown): string | undefined {
