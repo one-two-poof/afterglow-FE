@@ -14,9 +14,11 @@
  *   - 이후 `getAccessToken()`은 메모리 캐시를 동기로 반환
  *   - 로그인/로그아웃은 메모리 + secure-store를 갱신하고 구독자에게 통지(emit)
  */
+import * as AppleAuthentication from "expo-apple-authentication";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
 import * as WebBrowser from "expo-web-browser";
+import { Platform } from "react-native";
 
 import { env } from "@/lib/env";
 
@@ -32,11 +34,10 @@ const OAUTH_REDIRECT_URI = "afterglow://oauth/callback";
 const GOOGLE_LOGIN_PATH = "api/auth/login/google";
 
 /**
- * 백엔드 Apple 로그인 진입 경로. Google과 동일한 서버 리다이렉트 방식이다.
- *
- * NOTE: iOS 네이티브 Apple 로그인(expo-apple-authentication)으로 바꾸려면 이 상수
- * 대신 네이티브 SDK로 identityToken을 받아 백엔드에 POST하도록 startAppleLogin만
- * 교체하면 된다. 화면/버튼 UI는 그대로 재사용된다.
+ * Apple 로그인 경로. iOS 네이티브(ASAuthorizationAppleIDProvider)로 받은
+ * identityToken을 백엔드가 검증해 로그인/가입 처리한다.
+ * POST { identityToken, name? } → { accessToken, ... }.
+ * name은 애플이 최초 인가 시에만 내려주므로 값이 있을 때만 함께 보낸다.
  */
 const APPLE_LOGIN_PATH = "api/auth/login/apple";
 
@@ -166,13 +167,67 @@ const startOAuthRedirectLogin = async (loginPath: string): Promise<boolean> => {
 export const startGoogleLogin = (): Promise<boolean> =>
   startOAuthRedirectLogin(GOOGLE_LOGIN_PATH);
 
+/** 애플이 준 이름 구성요소를 하나의 표시 이름으로 합친다(없으면 undefined). */
+const formatAppleName = (
+  fullName: AppleAuthentication.AppleAuthenticationFullName | null,
+): string | undefined => {
+  if (!fullName) return undefined;
+  const name = [fullName.familyName, fullName.givenName]
+    .filter((part): part is string => Boolean(part && part.trim()))
+    .join(" ")
+    .trim();
+  return name.length > 0 ? name : undefined;
+};
+
 /**
- * Apple 로그인 시작. 현재는 Google과 동일한 백엔드 리다이렉트 방식이다.
- * (네이티브 Apple 로그인으로의 교체 지점은 `APPLE_LOGIN_PATH` 주석 참고)
+ * Apple 로그인 시작(iOS 네이티브).
+ * ASAuthorizationAppleIDProvider로 identityToken을 받아 백엔드에 POST한다.
+ * name(fullName)은 애플이 최초 인가 시에만 내려주므로 있을 때만 함께 보낸다.
+ *
  * @returns 로그인 성공 여부 (사용자가 취소하면 false)
+ * @throws  iOS가 아니거나 토큰이 없으면 Error (호출부에서 토스트로 안내)
  */
-export const startAppleLogin = (): Promise<boolean> =>
-  startOAuthRedirectLogin(APPLE_LOGIN_PATH);
+export const startAppleLogin = async (): Promise<boolean> => {
+  if (Platform.OS !== "ios") {
+    throw new Error("Apple 로그인은 iOS에서만 지원됩니다.");
+  }
+
+  // 네이티브 모듈/엔타이틀먼트가 없으면(예: 재빌드 전 바이너리) false.
+  if (!(await AppleAuthentication.isAvailableAsync())) {
+    throw new Error(
+      "이 기기에서 Apple 로그인을 사용할 수 없습니다. (네이티브 재빌드/entitlement 확인)",
+    );
+  }
+
+  let credential: AppleAuthentication.AppleAuthenticationCredential;
+  try {
+    credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+  } catch (error) {
+    // 사용자가 시트를 취소하면 로그인 미완료(에러 아님)로 처리한다.
+    if ((error as { code?: string }).code === "ERR_REQUEST_CANCELED") {
+      return false;
+    }
+    throw error;
+  }
+
+  if (!credential.identityToken) {
+    throw new Error("Apple 로그인 응답에 identityToken이 없습니다.");
+  }
+
+  const body: Record<string, string> = {
+    identityToken: credential.identityToken,
+  };
+  const name = formatAppleName(credential.fullName);
+  if (name) body.name = name;
+
+  await postCredentials(APPLE_LOGIN_PATH, body);
+  return true;
+};
 
 /**
  * 자체 로그인/회원가입 성공 응답 형태.
@@ -203,10 +258,12 @@ const postCredentials = async (
   });
 
   if (!response.ok) {
+    // 서버가 준 에러 본문을 함께 남겨 원인 파악을 돕는다(콘솔 로그로 노출).
+    const detail = await response.text().catch(() => "");
     if (response.status === 401 || response.status === 403) {
-      throw new UnauthorizedError();
+      throw new UnauthorizedError(`Unauthorized (${response.status}) ${detail}`);
     }
-    throw new Error(`인증 요청 실패 (${response.status})`);
+    throw new Error(`인증 요청 실패 (${response.status}) ${detail}`);
   }
 
   const data = (await response.json()) as Partial<TokenResponse>;

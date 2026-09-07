@@ -66,8 +66,10 @@ export function Login() {
       const start = provider === "google" ? startGoogleLogin : startAppleLogin;
       const loggedIn = await start();
       if (loggedIn) router.replace("/");
-    } catch {
-      showToast(t("login.failed"));
+    } catch (error) {
+      // 실제 실패 원인은 개발 중 Metro 콘솔에서 확인한다.
+      console.warn(`[social-login:${provider}] failed`, error);
+      showToast(t("login.socialFailed"));
     } finally {
       setLoadingProvider(null);
     }

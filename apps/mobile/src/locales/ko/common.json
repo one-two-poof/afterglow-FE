@@ -51,6 +51,7 @@
   "login.errorEmailInvalid": "올바른 이메일 형식이 아니에요.",
   "login.errorPasswordRequired": "비밀번호를 입력해주세요.",
   "login.failed": "로그인에 실패했어요. 이메일과 비밀번호를 확인해주세요.",
+  "login.socialFailed": "소셜 로그인에 실패했어요. 잠시 후 다시 시도해주세요.",
   "signup.title": "회원가입",
   "signup.subtitle": "이메일로 가입하고\n나만의 여행 코스를 저장하세요.",
   "signup.nameLabel": "이름",
