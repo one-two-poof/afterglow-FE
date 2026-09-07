@@ -4,7 +4,8 @@
  */
 import type { MapBounds } from "@/components/MapLibreMap/types";
 import { apiClient } from "@/lib/axios";
-import type { Place } from "@/types/place";
+import { buildPlaceDetailRequest } from "@/lib/place-detail";
+import type { Place, PlaceDetail } from "@/types/place";
 
 /** 같은 id가 여러 번 오면 첫 항목만 남긴다 (입력 순서 유지). */
 const dedupeById = (places: Place[]): Place[] => {
@@ -41,6 +42,19 @@ export async function fetchPlaces(name?: string): Promise<Place[]> {
   });
   // 중복 제거 + 잘못된(한국 밖) 좌표 제외
   return sanitize(data);
+}
+
+/** 장소 ID와 유형으로 상세 정보(소개, 이미지, 유형별 부가 정보)를 조회한다. */
+export async function fetchPlaceDetail(
+  id: number,
+  placeType: string,
+): Promise<PlaceDetail> {
+  const request = buildPlaceDetailRequest(id, placeType);
+  const { data } = await apiClient.get<Omit<PlaceDetail, "placeType">>(
+    request.url,
+    { params: request.params },
+  );
+  return { ...data, placeType: request.params.placeType };
 }
 
 /** 지도 카테고리 필터 종류 (웹 lib/places와 동일). */

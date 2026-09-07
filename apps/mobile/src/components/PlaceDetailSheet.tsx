@@ -1,5 +1,5 @@
 import { colors } from "@afterglow/tokens";
-import { Copy, ExternalLink, Navigation, Phone, X } from "lucide-react-native";
+import { Copy, ExternalLink, Navigation, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import {
   Animated,
@@ -14,6 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { MarkerDetail } from "@/components/MapLibreMap/types";
 import { PlaceThumbnail } from "@/components/PlaceThumbnail";
+import { PlaceDetailContent } from "@/components/PlaceDetailContent";
+import { usePlaceDetail } from "@/hooks/use-place-detail";
 import { useI18n } from "@/i18n/i18n-provider";
 
 interface PlaceDetailSheetProps {
@@ -39,6 +41,7 @@ export function PlaceDetailSheet({
   onExternalMapPress,
 }: PlaceDetailSheetProps) {
   const { t } = useI18n();
+  const placeDetailQuery = usePlaceDetail(detail.id, detail.placeType);
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.min(windowHeight * 0.58, 520);
   const collapsedOffset = Math.max(sheetHeight - COLLAPSED_CONTENT_HEIGHT, 0);
@@ -184,29 +187,15 @@ export function PlaceDetailSheet({
           <>
             <ScrollView
               className="flex-1 px-5"
-              contentContainerClassName="gap-4 py-3"
+              contentContainerClassName="py-3"
             >
-              {detail.address ? (
-                <View>
-                  <Text className="text-label-sm text-text-muted">
-                    {t("home.detail.address")}
-                  </Text>
-                  <Text className="mt-1 text-body-md text-text">
-                    {detail.address}
-                  </Text>
-                </View>
-              ) : null}
-              {detail.description ? (
-                <Text className="text-body-md text-text-secondary">
-                  {detail.description}
-                </Text>
-              ) : null}
-              {detail.phone ? (
-                <View className="flex-row items-center gap-2">
-                  <Phone size={18} color={colors["text-secondary"]} />
-                  <Text className="text-body-md text-text">{detail.phone}</Text>
-                </View>
-              ) : null}
+              <PlaceDetailContent
+                detail={detail}
+                placeInfo={placeDetailQuery.data}
+                loading={placeDetailQuery.isLoading && detail.id !== undefined}
+                error={placeDetailQuery.isError}
+                onRetry={() => void placeDetailQuery.refetch()}
+              />
             </ScrollView>
             <View className="mx-5 mb-2 flex-row gap-2">
               <Pressable

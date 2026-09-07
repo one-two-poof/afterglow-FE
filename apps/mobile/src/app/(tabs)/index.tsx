@@ -156,6 +156,7 @@ type LatLngPoint = { lat: number; lng: number };
 
 /** 장소(Place) → 마커 상세 카드 정보. */
 const placeToDetail = (place: Place): MarkerDetail => ({
+  id: place.id,
   title: place.placeName,
   subtitle: place.categoryName || place.categoryGroupName || undefined,
   address: place.roadAddressName || place.addressName || undefined,
