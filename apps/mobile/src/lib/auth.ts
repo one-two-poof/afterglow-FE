@@ -40,10 +40,10 @@ const GOOGLE_LOGIN_PATH = "api/auth/login/google";
  */
 const APPLE_LOGIN_PATH = "api/auth/login/apple";
 
-/** 자체(이메일) 로그인 경로. POST { email, password } → { token }. */
+/** 자체(이메일) 로그인 경로. POST { email, password } → { accessToken, ... }. */
 const EMAIL_LOGIN_PATH = "api/auth/login";
 
-/** 자체(이메일) 회원가입 경로. POST { name, email, password } → { token }. */
+/** 자체(이메일) 회원가입 경로. POST { email, password, passwordConfirm } → { accessToken, ... }. */
 const EMAIL_SIGNUP_PATH = "api/auth/signup";
 
 /** 로그인 사용자 정보 (GET /api/auth/me 응답) */
@@ -174,13 +174,19 @@ export const startGoogleLogin = (): Promise<boolean> =>
 export const startAppleLogin = (): Promise<boolean> =>
   startOAuthRedirectLogin(APPLE_LOGIN_PATH);
 
-/** 자체 로그인/회원가입 요청 본문에서 파생되는 토큰 응답 형태. */
+/**
+ * 자체 로그인/회원가입 성공 응답 형태.
+ * 백엔드는 `{ accessToken, tokenType, expiresIn }`을 돌려준다. 현재 앱은
+ * accessToken만 저장해 Bearer로 쓰고, tokenType·expiresIn은 아직 사용하지 않는다.
+ */
 interface TokenResponse {
-  token: string;
+  accessToken: string;
+  tokenType: string;
+  expiresIn: number;
 }
 
 /**
- * 자체 인증 엔드포인트(POST)에 JSON을 보내고 { token }을 받아 저장한다.
+ * 자체 인증 엔드포인트(POST)에 JSON을 보내고 { accessToken }을 받아 저장한다.
  * apiClient(lib/axios) 대신 fetch를 쓰는 이유: apiClient는 lib/auth를 import하므로
  * 여기서 apiClient를 쓰면 순환 참조가 된다. 로그인 전이라 인증 헤더도 필요 없다.
  *
@@ -204,11 +210,11 @@ const postCredentials = async (
   }
 
   const data = (await response.json()) as Partial<TokenResponse>;
-  if (typeof data.token !== "string" || data.token.length === 0) {
+  if (typeof data.accessToken !== "string" || data.accessToken.length === 0) {
     throw new Error("응답에 토큰이 없습니다.");
   }
 
-  await setAccessToken(data.token);
+  await setAccessToken(data.accessToken);
 };
 
 /** 이메일·비밀번호로 로그인한다. 성공 시 토큰을 저장한다. */
@@ -221,14 +227,17 @@ export const loginWithEmail = (params: {
     password: params.password,
   });
 
-/** 이메일·비밀번호·이름으로 회원가입한다. 성공 시 바로 로그인 상태가 된다. */
+/**
+ * 이메일·비밀번호로 회원가입한다. 성공 시 바로 로그인 상태가 된다.
+ * 백엔드가 서버에서도 일치를 검증하므로 passwordConfirm까지 함께 보낸다.
+ */
 export const signUpWithEmail = (params: {
-  name: string;
   email: string;
   password: string;
+  passwordConfirm: string;
 }): Promise<void> =>
   postCredentials(EMAIL_SIGNUP_PATH, {
-    name: params.name,
     email: params.email,
     password: params.password,
+    passwordConfirm: params.passwordConfirm,
   });
