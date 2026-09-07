@@ -9,7 +9,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test": "tsx --test tests/*.test.mjs",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -61,6 +61,7 @@
     "eslint": "^9.39.5",
     "eslint-config-expo": "~57.0.1",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "tsx": "^4.23.13",
     "typescript": "~6.0.3"
   }
 }
