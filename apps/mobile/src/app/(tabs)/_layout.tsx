@@ -33,20 +33,20 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="my-course"
-        options={{
-          title: t("tabs.courses"),
-          tabBarIcon: ({ color, size }) => (
-            <LineSquiggle color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="tourism-info"
         options={{
           title: t("tabs.tourism"),
           tabBarIcon: ({ color, size }) => (
             <MapPinned color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="my-course"
+        options={{
+          title: t("tabs.courses"),
+          tabBarIcon: ({ color, size }) => (
+            <LineSquiggle color={color} size={size} />
           ),
         }}
       />
