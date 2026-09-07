@@ -2,6 +2,7 @@ import { colors } from "@afterglow/tokens";
 import { Tabs } from "expo-router";
 import { Home, LineSquiggle, MapPinned, User } from "lucide-react-native";
 
+import { useAccessToken } from "@/hooks/use-access-token";
 import { useI18n } from "@/i18n/i18n-provider";
 
 /**
@@ -16,6 +17,10 @@ import { useI18n } from "@/i18n/i18n-provider";
  */
 export default function TabsLayout() {
   const { t } = useI18n();
+  // 로그인 상태에서만 "내 코스" 탭을 노출한다. 미로그인(null)·hydrate 전(undefined)에는
+  // href를 null로 줘 탭 바에서 숨긴다. (라우트 자체는 남아 있어 로그인 후 자동 노출)
+  const token = useAccessToken();
+  const isAuthed = typeof token === "string";
 
   return (
     <Tabs
@@ -44,6 +49,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="my-course"
         options={{
+          href: isAuthed ? undefined : null,
           title: t("tabs.courses"),
           tabBarIcon: ({ color, size }) => (
             <LineSquiggle color={color} size={size} />
