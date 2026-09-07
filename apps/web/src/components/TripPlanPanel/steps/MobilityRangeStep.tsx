@@ -1,66 +1,50 @@
 "use client";
 
 import { cn } from "@afterglow/utils";
-import { Check } from "lucide-react";
+import { Check, MapPin } from "lucide-react";
 
-export interface WalkPreferenceOption {
-  /** 제출 값 (1~5) */
-  value: number;
-  label: string;
-  emoji: string;
-  description: string;
-}
-
-/** 도보 선호도 선택지. value(1~5)가 곧 제출 값(user_walk_preference) */
-export const WALK_PREFERENCES: WalkPreferenceOption[] = [
+const MOBILITY_RANGES = [
   {
     value: 1,
-    label: "여유형",
-    emoji: "🚗",
-    description: "도보 10분 미만, 택시/지하철 바로 앞 명소 위주",
+    label: "가까운 동네",
+    description: "시작 관광지 주변에서 여유롭게 둘러봐요.",
   },
   {
     value: 2,
-    label: "가벼운 활동형",
-    emoji: "🚶",
-    description: "도보 10~30분, 가벼운 가로수길이나 쇼핑몰 산책",
+    label: "인접 지역",
+    description: "가까운 지역까지 가볍게 이동해요.",
   },
   {
     value: 3,
-    label: "표준 활동형",
-    emoji: "🏃",
-    description: "도보 30분 이상, 활동적인 트레킹이나 광범위 탐방",
+    label: "적당한 이동",
+    description: "여러 지역을 균형 있게 둘러봐요.",
   },
   {
     value: 4,
-    label: "적극 활동형",
-    emoji: "🏃",
-    description: "도보 30분 이상, 활동적인 트레킹이나 광범위 탐방",
+    label: "넓은 이동",
+    description: "조금 멀어도 원하는 명소를 찾아가요.",
   },
   {
     value: 5,
-    label: "도보 탐방형",
-    emoji: "🏃",
-    description: "도보 30분 이상, 활동적인 트레킹이나 광범위 탐방",
+    label: "도시 전체",
+    description: "거리 제한 없이 다양한 지역을 탐방해요.",
   },
 ];
 
-export interface WalkPreferenceStepProps {
+export interface MobilityRangeStepProps {
   value: number | null;
   onChange: (value: number) => void;
 }
 
-/** 도보 선호도 선택 (단일 선택). 1~5 숫자를 제출 */
-export const WalkPreferenceStep = ({
+export const MobilityRangeStep = ({
   value,
   onChange,
-}: WalkPreferenceStepProps) => (
+}: MobilityRangeStepProps) => (
   <div className="flex flex-col gap-3 pt-2">
     <p className="text-body-sm text-text-secondary">
-      시술 후 체력 및 회복 상태를 고려해 도보 정도를 알려주세요.
+      하루의 시작 관광지에서 얼마나 멀리까지 이동해도 괜찮은지 알려주세요.
     </p>
-
-    {WALK_PREFERENCES.map((option) => {
+    {MOBILITY_RANGES.map((option) => {
       const selected = value === option.value;
       return (
         <button
@@ -75,15 +59,15 @@ export const WalkPreferenceStep = ({
               : "border-transparent hover:border-border",
           )}
         >
-          <span aria-hidden="true" className="text-2xl leading-none">
-            {option.emoji}
-          </span>
-
+          <MapPin
+            aria-hidden="true"
+            className="shrink-0 text-primary"
+            size={18 + option.value * 2}
+          />
           <div className="min-w-0 flex-1">
             <p className="text-label-lg text-text">{option.label}</p>
             <p className="text-body-sm text-text-muted">{option.description}</p>
           </div>
-
           <span
             aria-hidden="true"
             className={cn(
@@ -93,7 +77,7 @@ export const WalkPreferenceStep = ({
                 : "border-2 border-neutral-300",
             )}
           >
-            {selected && <Check size={14} strokeWidth={3} />}
+            {selected ? <Check size={14} strokeWidth={3} /> : null}
           </span>
         </button>
       );
