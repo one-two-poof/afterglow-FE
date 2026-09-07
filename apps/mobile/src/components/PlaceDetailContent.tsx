@@ -1,7 +1,8 @@
 import { colors } from "@afterglow/tokens";
 import { Phone } from "lucide-react-native";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { Image } from "@/components/Image";
 import type { MarkerDetail } from "@/components/MapLibreMap/types";
 import { PlaceDetailFacts } from "@/components/PlaceDetailFacts";
 import { useI18n } from "@/i18n/i18n-provider";
@@ -54,7 +55,10 @@ export function PlaceDetailContent({
                   index: index + 1,
                 })}
                 className="h-36 w-60 rounded-[8px] bg-surface-muted"
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                recyclingKey={uri}
+                transition={100}
               />
             ))}
           </ScrollView>

@@ -1,7 +1,8 @@
 import { cn } from "@afterglow/utils";
 import { useState } from "react";
-import { Image, View } from "react-native";
+import { View } from "react-native";
 
+import { Image } from "@/components/Image";
 import { PlaceDefaultIcon } from "@/components/PlaceDefaultIcon";
 import { normalizePlaceImageUrl } from "@/lib/place-detail";
 
@@ -31,7 +32,10 @@ export function PlaceThumbnail({
       <Image
         source={{ uri: safeImageUrl }}
         accessibilityIgnoresInvertColors
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        recyclingKey={safeImageUrl}
+        transition={100}
         className={thumbnailClass}
         onError={() => setFailedImageUrl(safeImageUrl)}
       />
