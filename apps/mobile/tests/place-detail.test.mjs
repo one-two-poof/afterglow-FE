@@ -58,23 +58,21 @@ test("builds hospital facts and omits missing values", () => {
   );
 });
 
-test("omits post-treatment recommendation and walking difficulty", () => {
+test("omits internal attraction metrics from user-facing facts", () => {
   const facts = buildPlaceDetailFacts({
     placeType: "ATTRACTION",
     isIndoor: false,
     isHeatSource: false,
     isMassageSpot: false,
     walkHard: 4,
+    popularity: 82,
     extraInfo: {
       useTime: "월~금 10:00~20:00",
       restDate: "일요일, 월요일",
     },
   });
 
-  assert.deepEqual(
-    facts.map(({ key }) => key),
-    ["isIndoor", "isHeatSource", "useTime", "restDate"],
-  );
+  assert.deepEqual(facts.map(({ key }) => key), ["useTime", "restDate"]);
 });
 
 test("returns unique non-empty detail images with the primary image first", () => {

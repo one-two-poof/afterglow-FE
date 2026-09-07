@@ -21,14 +21,6 @@ export function PlaceDetailFacts({ placeInfo }: { placeInfo: PlaceDetail }) {
   if (facts.length === 0) return null;
 
   const formatValue = (fact: PlaceDetailFact) => {
-    if (fact.key === "isIndoor") {
-      return t(
-        fact.value ? "home.detail.value.indoor" : "home.detail.value.outdoor",
-      );
-    }
-    if (fact.format === "boolean") {
-      return t(fact.value ? "home.detail.value.yes" : "home.detail.value.no");
-    }
     if (fact.format === "availability") {
       const available = ["Y", "YES", "TRUE", "1"].includes(
         String(fact.value).trim().toUpperCase(),

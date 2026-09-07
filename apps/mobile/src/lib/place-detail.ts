@@ -2,9 +2,6 @@ import type { PlaceDetail } from "@/types/place";
 
 export type PlaceDetailFactKey =
   | "skinTreatmentSignals"
-  | "isIndoor"
-  | "isHeatSource"
-  | "popularity"
   | "mainSubject"
   | "specialProcedure"
   | "serviceLanguage"
@@ -24,8 +21,7 @@ export type PlaceDetailFactKey =
   | "expGuide"
   | "infoCenter";
 
-export type PlaceDetailFactFormat =
-  "text" | "boolean" | "availability" | "link";
+export type PlaceDetailFactFormat = "text" | "availability" | "link";
 
 export interface PlaceDetailFact {
   key: PlaceDetailFactKey;
@@ -76,9 +72,6 @@ const FACTS_BY_PLACE_TYPE: Record<string, FactDefinition[]> = {
     { key: "scale", source: "extraInfo" },
   ],
   ATTRACTION: [
-    { key: "isIndoor", format: "boolean" },
-    { key: "isHeatSource", format: "boolean" },
-    { key: "popularity" },
     { key: "useTime", source: "extraInfo" },
     { key: "restDate", source: "extraInfo" },
     { key: "parking", source: "extraInfo" },
