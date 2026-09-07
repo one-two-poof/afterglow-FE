@@ -18,14 +18,23 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(i18n.isInitialized);
 
   useEffect(() => {
-    void AsyncStorage.getItem(LOCALE_STORAGE_KEY)
-      .then((storedLocale) =>
-        initializeI18n(
+    // AsyncStorage 네이티브 모듈이 없는(예: 재빌드 전 dev client) 환경에서는
+    // getItem이 동기적으로 throw 하므로, async/try-catch로 감싸 앱 전체 크래시를
+    // 막고 기기 로케일로 폴백한다.
+    const restoreLocale = async () => {
+      try {
+        const storedLocale = await AsyncStorage.getItem(LOCALE_STORAGE_KEY);
+        await initializeI18n(
           isLocale(storedLocale) ? storedLocale : getDeviceLocale(),
-        ),
-      )
-      .catch(() => initializeI18n(getDeviceLocale()))
-      .then(() => setIsReady(true));
+        );
+      } catch {
+        await initializeI18n(getDeviceLocale());
+      } finally {
+        setIsReady(true);
+      }
+    };
+
+    void restoreLocale();
   }, []);
 
   if (!isReady) return null;
@@ -42,9 +51,13 @@ export function useI18n() {
   const setLocale = useCallback(
     (nextLocale: Locale) => {
       void instance.changeLanguage(nextLocale);
-      void AsyncStorage.setItem(LOCALE_STORAGE_KEY, nextLocale).catch(() => {
-        // 저장 실패 시에도 현재 앱 세션에서는 선택한 언어를 유지한다.
-      });
+      // setItem이 동기적으로 throw 할 수 있어(네이티브 모듈 부재) try-catch로 감싼다.
+      // 저장 실패 시에도 현재 앱 세션에서는 선택한 언어를 유지한다.
+      try {
+        void AsyncStorage.setItem(LOCALE_STORAGE_KEY, nextLocale).catch(() => {});
+      } catch {
+        // 무시: 이번 세션 동안만 선택 언어가 유지된다.
+      }
     },
     [instance],
   );
