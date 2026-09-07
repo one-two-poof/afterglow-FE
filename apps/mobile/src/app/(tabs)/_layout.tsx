@@ -1,6 +1,6 @@
 import { colors } from "@afterglow/tokens";
 import { Tabs } from "expo-router";
-import { Home, LineSquiggle, User } from "lucide-react-native";
+import { Home, LineSquiggle, MapPinned, User } from "lucide-react-native";
 
 import { useI18n } from "@/i18n/i18n-provider";
 
@@ -38,6 +38,15 @@ export default function TabsLayout() {
           title: t("tabs.courses"),
           tabBarIcon: ({ color, size }) => (
             <LineSquiggle color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="tourism-info"
+        options={{
+          title: t("tabs.tourism"),
+          tabBarIcon: ({ color, size }) => (
+            <MapPinned color={color} size={size} />
           ),
         }}
       />

@@ -115,7 +115,7 @@ function CourseDayLegend({
       {days.map((day, index) => (
         <View
           key={`${day.date}-${index}`}
-          className="h-8 flex-row items-center gap-2 rounded-full border border-border bg-neutral-0 px-3 shadow-sm"
+          className="h-8 gap-2 border-border bg-neutral-0 px-3 shadow-sm flex-row items-center rounded-full border"
         >
           <View
             className="size-2.5 rounded-full"
@@ -190,13 +190,37 @@ const resolveMarkerAddress = async (marker: MapMarker) => {
 export default function HomeScreen() {
   const { locale, t } = useI18n();
   const router = useRouter();
-  const { savedCourseId, markerLat, markerLng, markerLabel } =
-    useLocalSearchParams<{
-      savedCourseId?: string;
-      markerLat?: string;
-      markerLng?: string;
-      markerLabel?: string;
-    }>();
+  const {
+    savedCourseId,
+    markerLat,
+    markerLng,
+    markerLabel,
+    tourismPlaceId,
+    tourismPlaceType,
+    tourismPlaceName,
+    tourismPlaceCategory,
+    tourismPlaceAddress,
+    tourismPlaceLat,
+    tourismPlaceLng,
+    tourismPlaceImage,
+    tourismPlacePhone,
+    tourismPlacePrimaryTypeName,
+  } = useLocalSearchParams<{
+    savedCourseId?: string;
+    markerLat?: string;
+    markerLng?: string;
+    markerLabel?: string;
+    tourismPlaceId?: string;
+    tourismPlaceType?: string;
+    tourismPlaceName?: string;
+    tourismPlaceCategory?: string;
+    tourismPlaceAddress?: string;
+    tourismPlaceLat?: string;
+    tourismPlaceLng?: string;
+    tourismPlaceImage?: string;
+    tourismPlacePhone?: string;
+    tourismPlacePrimaryTypeName?: string;
+  }>();
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((s) => s.show);
   const [planOpen, setPlanOpen] = useState(false);
@@ -482,6 +506,74 @@ export default function HomeScreen() {
     savedCourseId,
   ]);
 
+  useEffect(() => {
+    const id = Number(tourismPlaceId);
+    const lat = Number(tourismPlaceLat);
+    const lng = Number(tourismPlaceLng);
+    if (
+      !Number.isInteger(id) ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      !tourismPlaceName
+    ) {
+      return;
+    }
+
+    const marker: MapMarker = {
+      lat,
+      lng,
+      label: tourismPlaceName,
+      detail: {
+        id,
+        title: tourismPlaceName,
+        subtitle: tourismPlaceCategory || undefined,
+        address: tourismPlaceAddress || undefined,
+        image: tourismPlaceImage || undefined,
+        phone: tourismPlacePhone || undefined,
+        placeType: tourismPlaceType || undefined,
+        primaryTypeName: tourismPlacePrimaryTypeName || undefined,
+      },
+    };
+    const frame = requestAnimationFrame(() => {
+      resetRoutePlan();
+      setSearch("");
+      setSearchOpen(false);
+      setSelectedPlace(null);
+      setFilter(FILTER_ALL);
+      setCoursePlaceMarker(marker);
+      setSavedCoursePlaceMarker(null);
+      setDetail(marker);
+      setDetailExpanded(false);
+      router.setParams({
+        tourismPlaceId: undefined,
+        tourismPlaceType: undefined,
+        tourismPlaceName: undefined,
+        tourismPlaceCategory: undefined,
+        tourismPlaceAddress: undefined,
+        tourismPlaceLat: undefined,
+        tourismPlaceLng: undefined,
+        tourismPlaceImage: undefined,
+        tourismPlacePhone: undefined,
+        tourismPlacePrimaryTypeName: undefined,
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [
+    resetRoutePlan,
+    router,
+    tourismPlaceAddress,
+    tourismPlaceCategory,
+    tourismPlaceId,
+    tourismPlaceImage,
+    tourismPlaceLat,
+    tourismPlaceLng,
+    tourismPlaceName,
+    tourismPlacePhone,
+    tourismPlacePrimaryTypeName,
+    tourismPlaceType,
+  ]);
+
   // 상세 카드 닫기(X). 패널에서 열린 상세(coursePlaceMarker)면 닫는 대신 패널로 복귀한다.
   // 일반 상세(검색/마커/카테고리)는 그냥 닫는다. 어느 쪽이든 그린 경로는 정리한다.
   const closeDetail = () => {
@@ -720,7 +812,7 @@ export default function HomeScreen() {
   ]);
 
   return (
-    <View className="flex-1 bg-bg">
+    <View className="bg-bg flex-1">
       <MapLibreMap
         ref={mapRef}
         markers={markers}
@@ -753,7 +845,7 @@ export default function HomeScreen() {
       {routePlanOpen && picking && (
         <View
           pointerEvents="none"
-          className="absolute inset-0 items-center justify-center"
+          className="inset-0 absolute items-center justify-center"
         >
           <Crosshair
             size={40}
@@ -767,7 +859,7 @@ export default function HomeScreen() {
       <SafeAreaView
         edges={["top"]}
         pointerEvents="box-none"
-        className="absolute inset-x-0 top-0"
+        className="inset-x-0 top-0 absolute"
       >
         <View pointerEvents="box-none" className="px-4 pt-2">
           <Input
@@ -792,14 +884,14 @@ export default function HomeScreen() {
           />
 
           {showResults && (
-            <View className="mt-2 max-h-64 overflow-hidden rounded-[8px] border border-border bg-neutral-0 shadow-md">
+            <View className="mt-2 max-h-64 border-border bg-neutral-0 shadow-md overflow-hidden rounded-[8px] border">
               <ScrollView keyboardShouldPersistTaps="handled">
                 {results.length > 0 ? (
                   results.map((place) => (
                     <Pressable
                       key={place.id}
                       onPress={() => selectPlace(place)}
-                      className="flex-row items-center gap-3 border-b border-border px-4 py-3 active:bg-surface-muted"
+                      className="gap-3 border-border px-4 py-3 active:bg-surface-muted flex-row items-center border-b"
                     >
                       <PlaceThumbnail
                         imageUrl={place.image}
@@ -809,7 +901,7 @@ export default function HomeScreen() {
                       />
                       <Text
                         numberOfLines={1}
-                        className="flex-1 text-body-sm text-text"
+                        className="text-body-sm text-text flex-1"
                       >
                         {place.placeName}
                       </Text>
@@ -835,13 +927,13 @@ export default function HomeScreen() {
           찍는다. "전체"는 모든 마커 해제. 지도 맨 하단에 둔다. */}
       <View
         pointerEvents="box-none"
-        className="absolute inset-x-0 bottom-0 gap-3"
+        className="inset-x-0 bottom-0 gap-3 absolute"
       >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t("home.plan.open")}
           onPress={openPlan}
-          className={`mr-4 size-14 items-center justify-center self-end rounded-full bg-primary shadow-md active:bg-action-primary-hover ${
+          className={`mr-4 size-14 bg-primary shadow-md active:bg-action-primary-hover items-center justify-center self-end rounded-full ${
             selectedCourseMap && !showResults ? "" : "mb-7"
           }`}
         >
@@ -930,14 +1022,14 @@ export default function HomeScreen() {
       {/* 지점 지정 안내 바 — 지도가 대부분 보이도록 하단에 얇게. 지도를 움직여 중앙
           십자선에 맞춘 뒤 "이 위치로 지정"으로 좌표를 확정한다. */}
       {routePlanOpen && picking && (
-        <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0">
+        <View pointerEvents="box-none" className="inset-x-0 bottom-0 absolute">
           <SafeAreaView
             edges={["bottom"]}
-            className="rounded-t-[16px] bg-neutral-0 shadow-md"
+            className="bg-neutral-0 shadow-md rounded-t-[16px]"
           >
-            <View className="flex-row items-center gap-2 px-5 pt-4 pb-1">
+            <View className="gap-2 px-5 pt-4 pb-1 flex-row items-center">
               <MapPin size={16} color={colors.primary} />
-              <Text className="flex-1 text-body-md text-text">
+              <Text className="text-body-md text-text flex-1">
                 {t("route.pickPrompt", {
                   point:
                     picking === "start" ? t("route.start") : t("route.end"),
@@ -958,7 +1050,7 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel={t("route.confirmLocation")}
               onPress={() => void confirmPick()}
-              className="mx-5 mt-2 mb-2 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
+              className="mx-5 mt-2 mb-2 h-11 gap-2 bg-primary active:bg-action-primary-hover flex-row items-center justify-center rounded-[8px]"
             >
               <Crosshair size={16} color={colors["on-action-primary"]} />
               <Text className="text-label-lg text-on-action-primary">
@@ -971,13 +1063,13 @@ export default function HomeScreen() {
 
       {/* 경로 설정 패널 — 시작지(현위치/지도)·도착지(장소 기본, 지도 변경) 설정 후 경로 찾기. */}
       {routePlanOpen && !picking && (
-        <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0">
+        <View pointerEvents="box-none" className="inset-x-0 bottom-0 absolute">
           <SafeAreaView
             edges={["bottom"]}
-            className="rounded-t-[16px] bg-neutral-0 shadow-md"
+            className="bg-neutral-0 shadow-md rounded-t-[16px]"
           >
-            <View className="flex-row items-center gap-2 px-5 pt-4 pb-1">
-              <Text className="flex-1 text-heading-sm text-text">
+            <View className="gap-2 px-5 pt-4 pb-1 flex-row items-center">
+              <Text className="text-heading-sm text-text flex-1">
                 {t("route.settings")}
               </Text>
               <Pressable
@@ -995,7 +1087,7 @@ export default function HomeScreen() {
               <Text className="mb-1 text-label-sm text-text-muted">
                 {t("route.start")}
               </Text>
-              <View className="flex-row gap-2">
+              <View className="gap-2 flex-row">
                 <Pressable
                   accessibilityRole="button"
                   accessibilityState={{ selected: startPoint === null }}
@@ -1006,7 +1098,7 @@ export default function HomeScreen() {
                         ? colors.primary
                         : colors["surface-muted"],
                   }}
-                  className="h-9 flex-1 flex-row items-center justify-center gap-1.5 rounded-[8px]"
+                  className="h-9 gap-1.5 flex-1 flex-row items-center justify-center rounded-[8px]"
                 >
                   <LocateFixed
                     size={15}
@@ -1038,7 +1130,7 @@ export default function HomeScreen() {
                         ? colors.primary
                         : colors["surface-muted"],
                   }}
-                  className="h-9 flex-1 flex-row items-center justify-center gap-1.5 rounded-[8px]"
+                  className="h-9 gap-1.5 flex-1 flex-row items-center justify-center rounded-[8px]"
                 >
                   <MapPin
                     size={15}
@@ -1068,12 +1160,12 @@ export default function HomeScreen() {
               <Text className="mb-1 text-label-sm text-text-muted">
                 {t("route.end")}
               </Text>
-              <View className="flex-row items-center gap-2">
-                <View className="flex-1 flex-row items-center gap-1.5">
+              <View className="gap-2 flex-row items-center">
+                <View className="gap-1.5 flex-1 flex-row items-center">
                   <Flag size={15} color={colors.text} />
                   <Text
                     numberOfLines={1}
-                    className="flex-1 text-body-md text-text"
+                    className="text-body-md text-text flex-1"
                   >
                     {endPoint?.label ?? t("route.mapPoint")}
                   </Text>
@@ -1082,7 +1174,7 @@ export default function HomeScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={t("route.changeEnd")}
                   onPress={() => setPicking("end")}
-                  className="h-9 flex-row items-center justify-center gap-1.5 rounded-[8px] border border-border px-3 active:bg-surface-muted"
+                  className="h-9 gap-1.5 border-border px-3 active:bg-surface-muted flex-row items-center justify-center rounded-[8px] border"
                 >
                   <MapPin size={14} color={colors.text} />
                   <Text className="text-label-md text-text">
@@ -1094,8 +1186,8 @@ export default function HomeScreen() {
 
             {/* 경로가 그려졌을 때 색 범례 (최단=파랑, 그늘길=초록) */}
             {routeLines.length > 0 && (
-              <View className="flex-row items-center gap-4 px-5 pt-3">
-                <View className="flex-row items-center gap-1.5">
+              <View className="gap-4 px-5 pt-3 flex-row items-center">
+                <View className="gap-1.5 flex-row items-center">
                   <View
                     className="h-1 w-5 rounded-full"
                     style={{ backgroundColor: ROUTE_COLORS.shortest }}
@@ -1104,7 +1196,7 @@ export default function HomeScreen() {
                     {t("route.shortest")}
                   </Text>
                 </View>
-                <View className="flex-row items-center gap-1.5">
+                <View className="gap-1.5 flex-row items-center">
                   <View
                     className="h-1 w-5 rounded-full"
                     style={{ backgroundColor: ROUTE_COLORS.shady }}
@@ -1129,7 +1221,7 @@ export default function HomeScreen() {
                   ? { backgroundColor: colors["action-disabled"] }
                   : undefined
               }
-              className="mx-5 mt-4 mb-2 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
+              className="mx-5 mt-4 mb-2 h-11 gap-2 bg-primary active:bg-action-primary-hover flex-row items-center justify-center rounded-[8px]"
             >
               {routing ? (
                 <ActivityIndicator
