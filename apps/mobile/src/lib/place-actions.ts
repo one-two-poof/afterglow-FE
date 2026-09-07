@@ -1,4 +1,4 @@
-export type ExternalMapPlatform = "android" | "ios" | "web";
+export type MapProvider = "apple" | "google" | "kakao" | "naver";
 
 interface ExternalMapDestination {
   latitude: number;
@@ -25,20 +25,30 @@ export async function copyPlaceToClipboard(
   await clipboard.setStringAsync(formatPlaceForClipboard(name, address));
 }
 
-export function buildExternalMapUrl(
-  platform: ExternalMapPlatform,
+export function buildMapUrl(
+  provider: MapProvider,
   { latitude, longitude, label }: ExternalMapDestination,
 ) {
   const coordinates = `${latitude},${longitude}`;
 
-  if (platform === "ios") {
+  if (provider === "apple") {
     const query = new URLSearchParams({ ll: coordinates, q: label });
     return `https://maps.apple.com/?${query.toString()}`;
   }
 
-  if (platform === "android") {
-    const query = encodeURIComponent(`${coordinates}(${label})`);
-    return `geo:${coordinates}?q=${query}`;
+  if (provider === "naver") {
+    const query = new URLSearchParams({
+      lat: String(latitude),
+      lng: String(longitude),
+      name: label,
+      appname: "com.dunaduneos.afterglow",
+    });
+    return `nmap://place?${query.toString()}`;
+  }
+
+  if (provider === "kakao") {
+    const query = new URLSearchParams({ p: coordinates });
+    return `kakaomap://look?${query.toString()}`;
   }
 
   const query = new URLSearchParams({ api: "1", query: coordinates });

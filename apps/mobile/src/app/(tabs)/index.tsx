@@ -15,7 +15,9 @@ import {
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActionSheetIOS,
   ActivityIndicator,
+  Alert,
   type ColorValue,
   Keyboard,
   Linking,
@@ -44,7 +46,11 @@ import {
   type RoutePin,
 } from "@/components/MapLibreMap/types";
 import { getCurrentLocation } from "@/lib/location";
-import { buildExternalMapUrl, copyPlaceToClipboard } from "@/lib/place-actions";
+import {
+  buildMapUrl,
+  copyPlaceToClipboard,
+  type MapProvider,
+} from "@/lib/place-actions";
 import { findClosestPlaceAddress } from "@/lib/place-match";
 import { fetchPlaces } from "@/lib/places";
 import { fetchRouteLines, ROUTE_COLORS, type RouteLine } from "@/lib/route";
@@ -522,19 +528,64 @@ export default function HomeScreen() {
   const openSelectedPlaceInExternalMap = async () => {
     if (!detail?.detail) return;
 
-    const platform =
-      Platform.OS === "ios" || Platform.OS === "android" ? Platform.OS : "web";
-    const url = buildExternalMapUrl(platform, {
+    const destination = {
       latitude: detail.lat,
       longitude: detail.lng,
       label: detail.detail.title,
-    });
+    };
+    const openProvider = async (provider: MapProvider) => {
+      try {
+        await Linking.openURL(buildMapUrl(provider, destination));
+      } catch {
+        showToast(t("home.detail.externalMapFailed"));
+      }
+    };
 
-    try {
-      await Linking.openURL(url);
-    } catch {
-      showToast(t("home.detail.externalMapFailed"));
+    if (Platform.OS === "web") {
+      await openProvider("google");
+      return;
     }
+
+    const nativeProviders = await Promise.all(
+      (["naver", "kakao"] as const).map(async (provider) => ({
+        provider,
+        installed: await Linking.canOpenURL(
+          provider === "naver" ? "nmap://" : "kakaomap://",
+        ).catch(() => false),
+      })),
+    );
+    const providers: MapProvider[] = [
+      ...nativeProviders
+        .filter(({ installed }) => installed)
+        .map(({ provider }) => provider),
+      "google",
+      ...(Platform.OS === "ios" ? (["apple"] as const) : []),
+    ];
+    const labels = providers.map((provider) =>
+      t(`home.detail.mapProvider.${provider}`),
+    );
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: t("home.detail.mapPickerTitle"),
+          options: [...labels, t("common.cancel")],
+          cancelButtonIndex: labels.length,
+        },
+        (index) => {
+          const provider = providers[index];
+          if (provider) void openProvider(provider);
+        },
+      );
+      return;
+    }
+
+    Alert.alert(t("home.detail.mapPickerTitle"), undefined, [
+      ...providers.map((provider, index) => ({
+        text: labels[index],
+        onPress: () => void openProvider(provider),
+      })),
+    ]);
   };
 
   // 설정 패널 닫기(경로 안내 취소). 상세 카드는 그대로 두어 다시 열 수 있게 한다.
