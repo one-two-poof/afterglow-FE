@@ -47,6 +47,12 @@ const EMAIL_LOGIN_PATH = "api/auth/login";
 /** 자체(이메일) 회원가입 경로. POST { email, password, passwordConfirm } → { accessToken, ... }. */
 const EMAIL_SIGNUP_PATH = "api/auth/signup";
 
+/** 회원가입 이메일 인증 코드 발송 경로. POST { email } (토큰 응답 없음). */
+const SIGNUP_MAIL_PATH = "api/auth/signup/mail";
+
+/** 회원가입 이메일 인증 코드 검증 경로. POST { email, code } (토큰은 무시). */
+const SIGNUP_VERIFY_PATH = "api/auth/signup/verify";
+
 /** 로그인 사용자 정보 (GET /api/auth/me 응답) */
 export interface AuthUser {
   id: number;
@@ -241,16 +247,16 @@ interface TokenResponse {
 }
 
 /**
- * 자체 인증 엔드포인트(POST)에 JSON을 보내고 { accessToken }을 받아 저장한다.
+ * 자체 인증 엔드포인트(POST)에 JSON을 보내고 응답(Response)을 반환한다.
  * apiClient(lib/axios) 대신 fetch를 쓰는 이유: apiClient는 lib/auth를 import하므로
  * 여기서 apiClient를 쓰면 순환 참조가 된다. 로그인 전이라 인증 헤더도 필요 없다.
  *
  * @throws 네트워크 실패 또는 4xx/5xx 응답 시 Error (호출부에서 토스트로 안내)
  */
-const postCredentials = async (
+const postJson = async (
   path: string,
   body: Record<string, string>,
-): Promise<void> => {
+): Promise<Response> => {
   const response = await fetch(buildApiUrl(path), {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -266,12 +272,44 @@ const postCredentials = async (
     throw new Error(`인증 요청 실패 (${response.status}) ${detail}`);
   }
 
+  return response;
+};
+
+/** 자체 인증 엔드포인트(POST)에 JSON을 보내고 { accessToken }을 받아 저장한다. */
+const postCredentials = async (
+  path: string,
+  body: Record<string, string>,
+): Promise<void> => {
+  const response = await postJson(path, body);
+
   const data = (await response.json()) as Partial<TokenResponse>;
   if (typeof data.accessToken !== "string" || data.accessToken.length === 0) {
     throw new Error("응답에 토큰이 없습니다.");
   }
 
   await setAccessToken(data.accessToken);
+};
+
+/**
+ * 회원가입 이메일 인증 코드 발송. POST /api/auth/signup/mail { email }.
+ * 토큰을 돌려주지 않으며, 성공 여부(2xx)만 확인한다.
+ */
+export const sendSignUpVerificationCode = async (
+  email: string,
+): Promise<void> => {
+  await postJson(SIGNUP_MAIL_PATH, { email });
+};
+
+/**
+ * 회원가입 이메일 인증 코드 검증. POST /api/auth/signup/verify { email, code }.
+ * 백엔드는 { accessToken, ... }을 돌려주지만, 로그인은 회원가입(signup) 응답으로 처리하므로
+ * 여기서는 토큰을 저장하지 않고 성공 여부(2xx)만 확인한다.
+ */
+export const verifySignUpCode = async (
+  email: string,
+  code: string,
+): Promise<void> => {
+  await postJson(SIGNUP_VERIFY_PATH, { email, code });
 };
 
 /** 이메일·비밀번호로 로그인한다. 성공 시 토큰을 저장한다. */
