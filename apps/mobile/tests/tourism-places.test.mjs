@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   filterTourismApiPlaces,
+  filterTourismAttractions,
   getTourismBrowseCategories,
   mergeTourismPlaces,
   normalizeTourismSearch,
@@ -45,11 +46,62 @@ test("uses the backend match-all value for a blank search", () => {
 });
 
 test("merges category results without duplicate places", () => {
-  const attraction = { id: 10, placeName: "경복궁" };
-  const accommodation = { id: 20, placeName: "서울호텔" };
+  const attraction = { id: 10, placeType: "ATTRACTION", placeName: "경복궁" };
+  const accommodation = {
+    id: 20,
+    placeType: "ACCOMMODATION",
+    placeName: "서울호텔",
+  };
 
   assert.deepEqual(
     mergeTourismPlaces([[attraction, accommodation], [accommodation]]),
     [attraction, accommodation],
   );
+});
+
+test("keeps places from different categories when their numeric ids overlap", () => {
+  const hospital = { id: 1, placeType: "HOSPITAL", placeName: "서울의원" };
+  const attraction = { id: 1, placeType: "ATTRACTION", placeName: "경복궁" };
+  const accommodation = {
+    id: 1,
+    placeType: "ACCOMMODATION",
+    placeName: "서울호텔",
+  };
+
+  assert.deepEqual(
+    mergeTourismPlaces([[hospital], [attraction], [accommodation]]),
+    [hospital, attraction, accommodation],
+  );
+});
+
+test("groups attractions into the five approved browse categories", () => {
+  const places = [
+    { id: 1, primaryTypeName: "미술관", categoryName: "문화시설" },
+    { id: 2, primaryTypeName: "공원", categoryName: "자연" },
+    { id: 3, primaryTypeName: "백화점", categoryName: "쇼핑" },
+    { id: 4, primaryTypeName: "찜질방/사우나", categoryName: "웰니스" },
+    { id: 5, primaryTypeName: "이색체험", categoryName: "체험관광지" },
+  ];
+
+  assert.deepEqual(
+    filterTourismAttractions(places, "culture").map(({ id }) => id),
+    [1],
+  );
+  assert.deepEqual(
+    filterTourismAttractions(places, "nature").map(({ id }) => id),
+    [2],
+  );
+  assert.deepEqual(
+    filterTourismAttractions(places, "shopping").map(({ id }) => id),
+    [3],
+  );
+  assert.deepEqual(
+    filterTourismAttractions(places, "wellness").map(({ id }) => id),
+    [4],
+  );
+  assert.deepEqual(
+    filterTourismAttractions(places, "experience").map(({ id }) => id),
+    [5],
+  );
+  assert.deepEqual(filterTourismAttractions(places, "all"), places);
 });
