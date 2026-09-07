@@ -8,7 +8,7 @@ import Svg, { Path } from "react-native-svg";
 import { startGoogleLogin } from "@/lib/auth";
 import { useI18n } from "@/i18n/i18n-provider";
 
-/** Google 브랜드 아이콘 (웹 인라인 SVG의 react-native-svg 포팅) */
+/** Google 브랜드 아이콘 (react-native-svg) */
 function GoogleIcon() {
   return (
     <Svg viewBox="0 0 24 24" width={18} height={18}>
@@ -33,7 +33,7 @@ function GoogleIcon() {
 }
 
 /**
- * 로그아웃 상태에서 보여줄 로그인 안내 화면. 웹 LoginPrompt의 RN 버전.
+ * 로그아웃 상태에서 보여줄 로그인 안내 화면.
  * Google 버튼은 딥링크 기반 OAuth(startGoogleLogin)로 연결된다. 로그인 성공 시
  * lib/auth의 토큰 저장 → emit으로 MyPage가 자동 리렌더되어 내 정보 화면으로 전환된다.
  */

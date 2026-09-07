@@ -1,5 +1,5 @@
 /**
- * 통합 추천 코스 API(ML 서버) 클라이언트. 웹 lib/course의 앱 버전.
+ * 통합 추천 코스 API(ML 서버) 클라이언트.
  * 여행 계획 폼 페이로드(TripPlanPayload)를 보내 rank별 추천 코스를 받는다.
  * 인증 헤더 첨부·에러 정규화는 aiClient 인터셉터(lib/axios, PR 2)가 담당한다.
  */

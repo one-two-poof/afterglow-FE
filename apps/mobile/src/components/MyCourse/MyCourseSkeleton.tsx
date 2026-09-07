@@ -2,7 +2,7 @@ import { View } from "react-native";
 import { useI18n } from "@/i18n/i18n-provider";
 
 /**
- * 인증 확인 / 코스 로딩 중 스켈레톤. 웹은 animate-pulse를 썼지만 RN엔 없어
+ * 인증 확인 / 코스 로딩 중 스켈레톤. RN엔 animate-pulse가 없어
  * 정적 회색 박스로 대체한다(필요 시 이후 Animated 펄스 추가).
  */
 export function MyCourseSkeleton() {

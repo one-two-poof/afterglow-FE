@@ -7,18 +7,18 @@ import { PlaceThumbnail } from "@/components/PlaceThumbnail";
 import { useI18n } from "@/i18n/i18n-provider";
 
 /**
- * 웹 `apps/web/src/components/PlaceCard/PlaceCard.tsx`를 RN으로 이식.
+ * 장소 정보 카드 컴포넌트.
  *
- * 웹과의 차이:
+ * 구현 메모:
  * - `<button>`/`<div>` → 상호작용 여부에 따라 `Pressable`/`View`, 문자열은 전부 `<Text>`.
  * - `<img>` → RN `Image`. `src`는 `source={{ uri }}`, `object-cover`는 `resizeMode="cover"`.
- *   이미지가 없으면 웹처럼 bg-surface-muted placeholder `View`를 그린다.
+ *   이미지가 없으면 bg-surface-muted placeholder `View`를 그린다.
  * - lucide-react → `lucide-react-native`의 `Check`. 흰색 체크는 토큰 `colors["neutral-0"]`로 준다
  *   (Text가 아니라 SVG라 className 글자색이 먹지 않으므로 color prop 사용).
- * - 웹의 `hover:` / `focus-visible:ring` / `transition`은 네이티브에 없어 제거했다.
+ * - `hover:` / `focus-visible:ring` / `transition`은 네이티브에 없어 제거했다.
  * - `truncate` → RN `Text`의 `numberOfLines={1}`.
  *
- * 상호작용 모드는 웹과 동일하게 두 가지:
+ * 상호작용 모드는 두 가지:
  * - onToggleSelect가 주어지면: 카드 전체는 비대화형(View), 체크만 Pressable(선택 해제).
  * - 없으면: 카드 전체가 Pressable(onSelect), 우측 인디케이터는 비대화형 표시용.
  */

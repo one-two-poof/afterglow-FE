@@ -45,7 +45,7 @@ export interface TripPlanPanelProps {
 }
 
 /**
- * 여행 계획 폼 패널 (RN 바텀시트). 웹 TripPlanPanel의 앱 버전.
+ * 여행 계획 폼 패널 (RN 바텀시트).
  *
  * 두 국면: 폼 작성(form) → 제출 후 추천 코스 브라우징(result). 폼 상태·단계는
  * useTripPlanForm 훅이 소유하고, 여기서는 단계 진행/제출/rank 브라우징만

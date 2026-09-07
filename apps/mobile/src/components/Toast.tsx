@@ -4,11 +4,10 @@ import { Animated, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /**
- * 앱 전역 토스트. 웹 Toast.tsx의 RN 버전.
+ * 앱 전역 토스트.
  *
- * 웹은 CSS transition으로 자연스럽게 나타났지만, RN엔 CSS transition이 없으므로
- * `Animated`로 페이드+슬라이드를 직접 구동한다. 스토어(@afterglow/stores)는 웹과
- * 공유하고, 이 컴포넌트는 그것을 구독해 렌더만 담당한다.
+ * RN엔 CSS transition이 없으므로
+ * `Animated`로 페이드+슬라이드를 직접 구동한다. 스토어(@afterglow/stores)를 구독해 렌더만 담당한다.
  */
 const VISIBLE_DURATION = 2500;
 const ANIM_DURATION = 200;

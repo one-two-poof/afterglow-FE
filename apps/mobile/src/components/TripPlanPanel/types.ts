@@ -1,4 +1,4 @@
-/** 여행 계획 폼 제출 페이로드 (백엔드 계약). 웹 TripPlanPanel/types.ts와 동일. */
+/** 여행 계획 폼 제출 페이로드 (백엔드 계약). */
 
 export interface DailyStart {
   /** "YYYY-MM-DD" */

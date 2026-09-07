@@ -1,6 +1,6 @@
 /**
  * 로그인 사용자 정보 API 클라이언트.
- * 웹은 getMe가 lib/auth에 있지만, 앱은 apiClient(lib/axios)를 쓰는데 axios가 다시
+ * apiClient(lib/axios)가 다시
  * lib/auth를 import하므로 순환을 피하려고 별도 파일로 분리한다. 인증 헤더 첨부·
  * 401/403 → UnauthorizedError 정규화는 apiClient 인터셉터(PR 2)가 담당한다.
  */

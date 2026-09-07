@@ -73,7 +73,7 @@ function Group({ items }: { items: SettingsItem[] }) {
   );
 }
 
-/** 설정 목록 + 로그아웃/회원 탈퇴. 웹 SettingsList의 RN 버전. */
+/** 설정 목록 + 로그아웃/회원 탈퇴. */
 export function SettingsList({
   onLogout,
   onDeleteAccount,

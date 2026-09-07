@@ -21,7 +21,7 @@ export interface MarkerDetail {
   primaryTypeName?: string;
 }
 
-/** 지도에 찍을 마커 (웹 MapMarker와 동일 개념). */
+/** 지도에 찍을 마커. */
 export interface MapMarker {
   lat: number;
   lng: number;

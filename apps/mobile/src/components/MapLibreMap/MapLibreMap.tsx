@@ -48,7 +48,7 @@ import {
   type MapLibreMapRef,
 } from "./types";
 
-// OpenFreeMap: 무료 OSM 벡터 배경지도(웹과 동일). 등록·API 키 불필요.
+// OpenFreeMap: 무료 OSM 벡터 배경지도. 등록·API 키 불필요.
 const BASEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 // buildings.pmtiles: PMTiles v3 / MVT / zoom 0~14 / 단일 레이어 "buildings".
@@ -59,7 +59,7 @@ const BASEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 const BUILDINGS_PMTILES_URL = env.buildingsPmtilesUrl;
 const BUILDINGS_SOURCE_LAYER = "buildings";
 
-// 그림자(그늘) 색 — 웹과 동일(디자인 토큰 secondary-900). 반투명으로 지면에 깔린다.
+// 그림자(그늘) 색 — 디자인 토큰 secondary-900. 반투명으로 지면에 깔린다.
 const SHADOW_COLOR = "#1c2b45";
 const SHADOW_UPDATE_DELAY_MS = 200;
 const MAP_PERFORMANCE_LOG_MARKER = "[map-perf]";
@@ -134,7 +134,7 @@ function CloudIcon({ color }: { color: string }) {
 
 /**
  * 지도 렌더 (RN). 배경지도 + 건물 PMTiles + 마커.
- * markers가 주어지면 그 지점들이 보이도록 카메라를 이동한다(웹 fitBounds와 동일 의도).
+ * markers가 주어지면 그 지점들이 보이도록 카메라를 이동한다.
  *
  * ⚠️ 네이티브 전용(웹은 MapLibreMap.web.tsx). 건물 PMTiles 렌더 크래시(서버 no-store
  *    이슈)는 [[pmtiles-tile-caching]] 참고 — 백엔드 캐시헤더 수정 대기.
@@ -463,7 +463,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
       }
     };
 
-    // 나침반 버튼: 현위치로 이동 (없으면 다시 요청, 거부/실패 시 기본값 유지). 웹과 동일 의도.
+    // 나침반 버튼: 현위치로 이동 (없으면 다시 요청, 거부/실패 시 기본값 유지).
     const recenter = async () => {
       const loc = userLocationRef.current ?? (await getCurrentLocation());
       if (loc) {
@@ -536,7 +536,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           ref={mapRef}
           style={StyleSheet.absoluteFill}
           mapStyle={BASEMAP_STYLE_URL}
-          // 웹의 attributionControl:false와 동일 — 정보(ⓘ) 버튼·로고 숨김
+          // attributionControl:false — 정보(ⓘ) 버튼·로고 숨김
           attribution={false}
           logo={false}
           onPress={onMapPress}

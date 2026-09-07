@@ -5,14 +5,14 @@ import { Home, LineSquiggle, User } from "lucide-react-native";
 import { useI18n } from "@/i18n/i18n-provider";
 
 /**
- * 하단 탭 네비게이션. 웹의 Footer(홈/내 코스/내 정보)에 대응한다.
+ * 하단 탭 네비게이션(홈/내 코스/내 정보).
  *
  * expo-router의 파일 기반 라우팅: 이 `(tabs)` 그룹의 각 화면 파일(index/my-course/
  * my-page)이 탭 하나가 된다. `(tabs)` 괄호 그룹은 URL 경로에 포함되지 않으므로
  * 홈은 그대로 `/`가 된다.
  *
- * 탭 색은 웹과 동일하게 토큰에서 가져온다(활성=action-primary, 비활성=text-muted).
- * 아이콘도 웹 Footer와 같은 lucide 셋(react-native 버전).
+ * 탭 색은 토큰에서 가져온다(활성=action-primary, 비활성=text-muted).
+ * 아이콘은 lucide 셋(react-native 버전).
  */
 export default function TabsLayout() {
   const { t } = useI18n();

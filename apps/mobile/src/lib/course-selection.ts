@@ -1,5 +1,5 @@
 /**
- * 코스 선택(저장) API 클라이언트. 웹 lib/course-selection의 앱 버전.
+ * 코스 선택(저장) API 클라이언트.
  * 인증 헤더 첨부·에러 정규화는 aiClient 인터셉터(lib/axios)가 담당한다.
  */
 import { aiClient } from "@/lib/axios";

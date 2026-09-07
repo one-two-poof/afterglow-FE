@@ -27,7 +27,7 @@ function Avatar({ name, src }: { name: string; src?: string }) {
   );
 }
 
-/** 프로필 헤더(아바타 + 이름/이메일). 웹 ProfileHeader의 RN 버전. */
+/** 프로필 헤더(아바타 + 이름/이메일). */
 export function ProfileHeader({ user }: { user: AuthUser }) {
   return (
     <View className="flex-row items-center gap-4 bg-surface px-5 py-6">
