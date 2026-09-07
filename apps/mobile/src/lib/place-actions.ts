@@ -37,13 +37,11 @@ export function buildMapUrl(
   }
 
   if (provider === "naver") {
-    const query = new URLSearchParams({
-      lat: String(latitude),
-      lng: String(longitude),
-      name: label,
-      appname: "com.dunaduneos.afterglow",
-    });
-    return `nmap://place?${query.toString()}`;
+    return (
+      `nmap://place?lat=${latitude}&lng=${longitude}` +
+      `&name=${encodeURIComponent(label)}` +
+      "&appname=com.dunaduneos.afterglow"
+    );
   }
 
   if (provider === "kakao") {
@@ -51,6 +49,5 @@ export function buildMapUrl(
     return `kakaomap://look?${query.toString()}`;
   }
 
-  const query = new URLSearchParams({ api: "1", query: coordinates });
-  return `https://www.google.com/maps/search/?${query.toString()}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(label)}`;
 }
