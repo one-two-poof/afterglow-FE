@@ -6,7 +6,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useI18n } from "@/i18n/i18n-provider";
 
-import { TERMS_DOCS, type TermsDoc } from "./terms-content";
+import { getTermsDocs, type TermsDoc } from "./terms-content";
 
 /** 문서 전환 세그먼트 컨트롤 (이용약관 / 개인정보처리방침). */
 function Segmented({
@@ -54,19 +54,16 @@ function Segmented({
  * 조항별 섹션과 시행일을 보여준다. 설정 목록의 "이용약관 및 개인정보처리방침"에서 진입.
  */
 export function Terms() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const docs = getTermsDocs(locale);
   const [activeKey, setActiveKey] = useState<TermsDoc["key"]>("terms");
-  const doc = TERMS_DOCS.find((d) => d.key === activeKey) ?? TERMS_DOCS[0]!;
+  const doc = docs.find((d) => d.key === activeKey) ?? docs[0]!;
 
   return (
     <View className="flex-1 bg-bg">
       <ScreenHeader title={t("terms.title")} />
       <ScrollView contentContainerClassName="gap-5 px-5 py-5 pb-12">
-        <Segmented
-          docs={TERMS_DOCS}
-          activeKey={activeKey}
-          onChange={setActiveKey}
-        />
+        <Segmented docs={docs} activeKey={activeKey} onChange={setActiveKey} />
 
         <Text className="text-caption text-text-muted">
           {t("terms.effectiveDate", { date: doc.effectiveDate })}
