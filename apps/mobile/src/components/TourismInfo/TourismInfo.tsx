@@ -17,13 +17,19 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { useTourismPlaces } from "@/hooks/use-tourism-places";
 import { useTourismPlaceActions } from "@/hooks/use-tourism-place-actions";
 import { useI18n } from "@/i18n/i18n-provider";
-import type { TourismBrowseCategory } from "@/lib/tourism-browse";
+import {
+  filterTourismAttractions,
+  type TourismAttractionCategory,
+  type TourismBrowseCategory,
+} from "@/lib/tourism-browse";
 import type { Place } from "@/types/place";
 
 export function TourismInfo() {
   const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<TourismBrowseCategory>("all");
+  const [attractionCategory, setAttractionCategory] =
+    useState<TourismAttractionCategory>("all");
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [detailExpanded, setDetailExpanded] = useState(true);
   const debouncedSearch = useDebounce(search, 300);
@@ -36,6 +42,13 @@ export function TourismInfo() {
   } = useTourismPlaces(category, debouncedSearch);
   const { copyPlace, openInExternalMap } =
     useTourismPlaceActions(selectedPlace);
+  const visiblePlaces = useMemo(
+    () =>
+      category === "attraction"
+        ? filterTourismAttractions(places, attractionCategory)
+        : places,
+    [attractionCategory, category, places],
+  );
 
   const selectedDetail = useMemo(
     () =>
@@ -57,6 +70,12 @@ export function TourismInfo() {
 
   const chooseCategory = (nextCategory: TourismBrowseCategory) => {
     setCategory(nextCategory);
+    setAttractionCategory("all");
+    setSelectedPlace(null);
+  };
+
+  const chooseAttractionCategory = (nextCategory: TourismAttractionCategory) => {
+    setAttractionCategory(nextCategory);
     setSelectedPlace(null);
   };
 
@@ -70,12 +89,14 @@ export function TourismInfo() {
       <TourismInfoHeader
         search={search}
         category={category}
+        attractionCategory={attractionCategory}
         onSearchChange={setSearch}
         onCategoryChange={chooseCategory}
+        onAttractionCategoryChange={chooseAttractionCategory}
       />
       <View className="px-5 py-3 flex-row items-center justify-between">
         <Text className="text-label-md text-text">
-          {t("tourism.results", { count: places.length })}
+          {t("tourism.results", { count: visiblePlaces.length })}
         </Text>
         {isFetching && !isLoading ? (
           <ActivityIndicator size="small" color={colors.primary} />
@@ -101,15 +122,15 @@ export function TourismInfo() {
         </View>
       ) : (
         <FlatList
-          data={places}
-          keyExtractor={(place) => String(place.id)}
+          data={visiblePlaces}
+          keyExtractor={(place) => `${place.placeType}:${place.id}`}
           renderItem={({ item }) => (
             <TourismPlaceCard place={item} onPress={() => openPlace(item)} />
           )}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           contentContainerClassName={
-            places.length === 0 ? "flex-grow" : undefined
+            visiblePlaces.length === 0 ? "flex-grow" : undefined
           }
           ListEmptyComponent={
             <View className="gap-1 px-6 pb-20 flex-1 items-center justify-center">

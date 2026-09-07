@@ -4,7 +4,10 @@ import { Search, X } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
 import { useI18n } from "@/i18n/i18n-provider";
-import type { TourismBrowseCategory } from "@/lib/tourism-browse";
+import type {
+  TourismAttractionCategory,
+  TourismBrowseCategory,
+} from "@/lib/tourism-browse";
 
 const CATEGORIES: TourismBrowseCategory[] = [
   "all",
@@ -13,16 +16,29 @@ const CATEGORIES: TourismBrowseCategory[] = [
   "hospital",
 ];
 
+const ATTRACTION_CATEGORIES: TourismAttractionCategory[] = [
+  "all",
+  "culture",
+  "nature",
+  "shopping",
+  "wellness",
+  "experience",
+];
+
 export function TourismInfoHeader({
   search,
   category,
+  attractionCategory,
   onSearchChange,
   onCategoryChange,
+  onAttractionCategoryChange,
 }: {
   search: string;
   category: TourismBrowseCategory;
+  attractionCategory: TourismAttractionCategory;
   onSearchChange: (search: string) => void;
   onCategoryChange: (category: TourismBrowseCategory) => void;
+  onAttractionCategoryChange: (category: TourismAttractionCategory) => void;
 }) {
   const { t } = useI18n();
 
@@ -90,6 +106,45 @@ export function TourismInfoHeader({
           );
         })}
       </View>
+
+      {category === "attraction" ? (
+        <>
+          <Text className="mt-4 mb-2 text-label-sm text-text-secondary">
+            {t("tourism.attractionCategory.label")}
+          </Text>
+          <View
+            accessibilityRole="radiogroup"
+            className="flex-row flex-wrap gap-2"
+          >
+            {ATTRACTION_CATEGORIES.map((item) => {
+              const selected = item === attractionCategory;
+              return (
+                <Pressable
+                  key={item}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => onAttractionCategoryChange(item)}
+                  className={
+                    selected
+                      ? "min-h-9 justify-center rounded-full bg-secondary px-3"
+                      : "min-h-9 justify-center rounded-full border border-border bg-surface px-3 active:bg-surface-muted"
+                  }
+                >
+                  <Text
+                    className={
+                      selected
+                        ? "text-label-sm text-text-inverse"
+                        : "text-label-sm text-text-secondary"
+                    }
+                  >
+                    {t(`tourism.attractionCategory.${item}`)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      ) : null}
     </View>
   );
 }
