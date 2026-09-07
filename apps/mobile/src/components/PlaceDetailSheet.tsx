@@ -186,15 +186,20 @@ export function PlaceDetailSheet({
               className="flex-1 px-5"
               contentContainerClassName="gap-4 py-3"
             >
-              {detail.description ? (
+              {detail.address ? (
                 <View>
                   <Text className="text-label-sm text-text-muted">
                     {t("home.detail.address")}
                   </Text>
                   <Text className="mt-1 text-body-md text-text">
-                    {detail.description}
+                    {detail.address}
                   </Text>
                 </View>
+              ) : null}
+              {detail.description ? (
+                <Text className="text-body-md text-text-secondary">
+                  {detail.description}
+                </Text>
               ) : null}
               {detail.phone ? (
                 <View className="flex-row items-center gap-2">

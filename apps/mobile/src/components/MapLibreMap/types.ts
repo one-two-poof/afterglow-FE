@@ -7,6 +7,8 @@ export interface MarkerDetail {
   subtitle?: string;
   /** 주소·거리·실내여부 등 설명 라인 */
   description?: string;
+  /** Postal address shown and copied separately from itinerary metadata. */
+  address?: string;
   /** 썸네일 이미지 URL */
   image?: string;
   /** Phone number shown in the expanded place sheet. */

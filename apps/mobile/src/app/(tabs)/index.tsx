@@ -45,6 +45,8 @@ import {
 } from "@/components/MapLibreMap/types";
 import { getCurrentLocation } from "@/lib/location";
 import { buildExternalMapUrl, copyPlaceToClipboard } from "@/lib/place-actions";
+import { findClosestPlaceAddress } from "@/lib/place-match";
+import { fetchPlaces } from "@/lib/places";
 import { fetchRouteLines, ROUTE_COLORS, type RouteLine } from "@/lib/route";
 import { TripPlanPanel } from "@/components/TripPlanPanel";
 import { useAccessToken } from "@/hooks/use-access-token";
@@ -150,12 +152,25 @@ type LatLngPoint = { lat: number; lng: number };
 const placeToDetail = (place: Place): MarkerDetail => ({
   title: place.placeName,
   subtitle: place.categoryName || place.categoryGroupName || undefined,
-  description: place.roadAddressName || place.addressName || undefined,
+  address: place.roadAddressName || place.addressName || undefined,
   image: place.image || undefined,
   phone: place.phone || undefined,
   placeType: place.placeType,
   primaryTypeName: place.primaryTypeName,
 });
+
+const resolveMarkerAddress = async (marker: MapMarker) => {
+  if (!marker.detail || marker.detail.address) {
+    return marker.detail?.address;
+  }
+
+  const places = await fetchPlaces(marker.detail.title);
+  return findClosestPlaceAddress(places, {
+    name: marker.detail.title,
+    lat: marker.lat,
+    lng: marker.lng,
+  });
+};
 
 /**
  * 홈 = 전체화면 지도 + 상단 검색 오버레이 + 하단 카테고리/코스 태그 + 여행 계획(+)
@@ -258,6 +273,37 @@ export default function HomeScreen() {
     () => (selectedCourse ? savedCourseToMapDecoration(selectedCourse) : null),
     [selectedCourse],
   );
+
+  useEffect(() => {
+    if (!detail?.detail || detail.detail.address) return;
+
+    let active = true;
+    void resolveMarkerAddress(detail)
+      .then((address) => {
+        if (!active || !address) return;
+        setDetail((current) => {
+          if (
+            !current?.detail ||
+            current.lat !== detail.lat ||
+            current.lng !== detail.lng ||
+            current.detail.title !== detail.detail?.title
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            detail: { ...current.detail, address },
+          };
+        });
+      })
+      .catch(() => {
+        // Address enrichment is optional; keep the course detail usable.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [detail]);
 
   // 카테고리 태그(병원/관광명소/숙소) 선택 시 현재 뷰포트의 장소를 조회.
   // "전체"·코스 선택 시엔 null이라 요청하지 않는다. 뷰포트가 바뀌면 그 영역으로 재조회.
@@ -464,10 +510,9 @@ export default function HomeScreen() {
     if (!detail?.detail) return;
 
     try {
-      await copyPlaceToClipboard(
-        detail.detail.title,
-        detail.detail.description,
-      );
+      const address =
+        detail.detail.address ?? (await resolveMarkerAddress(detail));
+      await copyPlaceToClipboard(detail.detail.title, address);
       showToast(t("home.detail.copySuccess"));
     } catch {
       showToast(t("home.detail.copyFailed"));
