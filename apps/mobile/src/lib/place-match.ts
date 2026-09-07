@@ -1,9 +1,12 @@
-interface PlaceAddressCandidate {
+interface PlaceCandidate {
   placeName: string;
-  roadAddressName: string;
-  addressName: string;
   mapX: number;
   mapY: number;
+}
+
+interface PlaceAddressCandidate extends PlaceCandidate {
+  roadAddressName: string;
+  addressName: string;
 }
 
 interface PlaceLocation {
@@ -14,11 +17,11 @@ interface PlaceLocation {
 
 const MAX_DISTANCE_SQUARED = 0.01 ** 2;
 
-export function findClosestPlaceAddress(
-  places: PlaceAddressCandidate[],
+export function findClosestPlace<T extends PlaceCandidate>(
+  places: T[],
   location: PlaceLocation,
-) {
-  const match = places
+): T | undefined {
+  return places
     .filter((place) => place.placeName.trim() === location.name.trim())
     .map((place) => ({
       place,
@@ -27,6 +30,13 @@ export function findClosestPlaceAddress(
     }))
     .filter(({ distanceSquared }) => distanceSquared <= MAX_DISTANCE_SQUARED)
     .sort((a, b) => a.distanceSquared - b.distanceSquared)[0]?.place;
+}
+
+export function findClosestPlaceAddress(
+  places: PlaceAddressCandidate[],
+  location: PlaceLocation,
+) {
+  const match = findClosestPlace(places, location);
 
   return match?.roadAddressName || match?.addressName || undefined;
 }

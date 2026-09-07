@@ -51,7 +51,7 @@ import {
   copyPlaceToClipboard,
   type MapProvider,
 } from "@/lib/place-actions";
-import { findClosestPlaceAddress } from "@/lib/place-match";
+import { findClosestPlace, findClosestPlaceAddress } from "@/lib/place-match";
 import { fetchPlaces } from "@/lib/places";
 import { fetchRouteLines, ROUTE_COLORS, type RouteLine } from "@/lib/route";
 import { TripPlanPanel } from "@/components/TripPlanPanel";
@@ -417,6 +417,44 @@ export default function HomeScreen() {
   const selectMarker = (marker: MapMarker) => {
     setDetail(marker);
     setDetailExpanded(false);
+
+    if (!marker.detail || marker.detail.id !== undefined) {
+      return;
+    }
+
+    void fetchPlaces(marker.detail.title)
+      .then((places) => {
+        const place = findClosestPlace(places, {
+          name: marker.detail!.title,
+          lat: marker.lat,
+          lng: marker.lng,
+        });
+        if (!place) return;
+
+        setDetail((current) => {
+          if (
+            !current?.detail ||
+            current.lat !== marker.lat ||
+            current.lng !== marker.lng ||
+            current.detail.title !== marker.detail!.title
+          ) {
+            return current;
+          }
+
+          const tourismDetail = placeToDetail(place);
+          return {
+            ...current,
+            detail: {
+              ...current.detail,
+              ...tourismDetail,
+              subtitle: current.detail.subtitle ?? tourismDetail.subtitle,
+            },
+          };
+        });
+      })
+      .catch(() => {
+        // Keep the saved-course summary visible when no tourism match is available.
+      });
   };
 
   const setPlaceDetailExpanded = (nextExpanded: boolean) => {

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { findClosestPlaceAddress } from "../src/lib/place-match.ts";
+import {
+  findClosestPlace,
+  findClosestPlaceAddress,
+} from "../src/lib/place-match.ts";
 
 const places = [
   {
@@ -61,5 +64,21 @@ test("does not use a same-name place that is too far away", () => {
       lng: 129.04,
     }),
     undefined,
+  );
+});
+
+test("returns the nearest exact-name place so a course marker can load details", () => {
+  const coursePlaces = [
+    { placeName: "Museum", mapX: 127.1, mapY: 37.5 },
+    { placeName: "Museum", mapX: 127.03, mapY: 37.5 },
+  ];
+
+  assert.equal(
+    findClosestPlace(coursePlaces, {
+      name: "Museum",
+      lat: 37.5,
+      lng: 127.031,
+    }),
+    coursePlaces[1],
   );
 });
