@@ -1,7 +1,14 @@
 import { useToastStore } from "@afterglow/stores";
 import { Button } from "@afterglow/ui-native";
 import { ArrowLeft, X } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   BackHandler,
@@ -13,6 +20,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import {
@@ -30,8 +38,10 @@ import { useRecommendCourses } from "./hooks/use-recommend-courses";
 import { useTripPlanForm } from "./hooks/use-trip-plan-form";
 import { ResultStep } from "./ResultStep";
 
-const COLLAPSED_HEIGHT_RATIO = 0.2;
-const MIN_COLLAPSED_HEIGHT = 180;
+// 접었을 때 화면에 남길 최소 노출 높이. 0이면 패널을 화면 밖으로 완전히 내린다
+// (하단의 + 버튼이 가려지지 않도록). 다시 열기는 + 버튼이 담당한다.
+const COLLAPSED_HEIGHT_RATIO = 0;
+const MIN_COLLAPSED_HEIGHT = 0;
 const DRAG_THRESHOLD = 48;
 
 export interface TripPlanPanelProps {
@@ -58,14 +68,19 @@ export const TripPlanPanel = ({
 }: TripPlanPanelProps) => {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const [sheetHeight, setSheetHeight] = useState(0);
   const collapsedHeight = Math.min(
     Math.max(sheetHeight * COLLAPSED_HEIGHT_RATIO, MIN_COLLAPSED_HEIGHT),
     sheetHeight,
   );
   const collapsedOffset = Math.max(sheetHeight - collapsedHeight, 0);
-  const [expanded, setExpanded] = useState(true);
   const [translateY] = useState(() => new Animated.Value(0));
+  // 슬라이드 아웃 애니메이션이 끝난 뒤 언마운트하기 위한 상태. 애니메이션 완료
+  // 콜백에서만 갱신한다(effect 본문에서 동기로 setState 하지 않도록).
+  const [mounted, setMounted] = useState(open);
+  // open=true 면 즉시 렌더(슬라이드 인), 닫힐 땐 아웃 애니메이션 동안 유지한다.
+  const visible = open || mounted;
   const { steps, reset: resetForm, buildPayload } = useTripPlanForm();
   const [step, setStep] = useState(0);
 
@@ -85,23 +100,57 @@ export const TripPlanPanel = ({
 
   const showToast = useToastStore((s) => s.show);
 
-  const moveTo = useCallback(
-    (nextExpanded: boolean) => {
-      setExpanded(nextExpanded);
+  const springTo = useCallback(
+    (toValue: number) =>
       Animated.spring(translateY, {
-        toValue: nextExpanded ? 0 : collapsedOffset,
-        damping: 24,
-        stiffness: 240,
-        mass: 0.8,
+        toValue,
+        damping: 26,
+        stiffness: 220,
+        mass: 0.9,
         useNativeDriver: true,
-      }).start();
-    },
-    [collapsedOffset, translateY],
+      }),
+    [translateY],
   );
 
-  useEffect(() => {
-    translateY.setValue(expanded ? 0 : collapsedOffset);
-  }, [collapsedOffset, expanded, translateY]);
+  // 위로 스프링(펼치기) 또는 닫기. 닫기는 open=false 를 유발하고, 아래 open 효과가
+  // 슬라이드 아웃 애니메이션을 재생한 뒤 언마운트한다(하단 + 버튼으로 다시 열림).
+  const moveTo = useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) {
+        springTo(0).start();
+      } else {
+        onClose();
+      }
+    },
+    [onClose, springTo],
+  );
+
+  // open 전환에 맞춰 슬라이드 인/아웃.
+  // 열기: 화면 밖(hiddenOffset) → 0. 닫기: 현재 위치 → 화면 밖 → 언마운트.
+  // 숨김 위치는 창 높이(안정값)로 잡는다. sheetHeight(측정값)를 쓰면 최초 열기 때
+  // onLayout 으로 값이 바뀌며 슬라이드 인 애니메이션이 중단된다. 창 높이면 패널
+  // 높이보다 크므로 항상 화면 밖으로 완전히 내려간다.
+  const prevOpenRef = useRef(open);
+  useLayoutEffect(() => {
+    const wasOpen = prevOpenRef.current;
+    prevOpenRef.current = open;
+    if (open === wasOpen) return;
+
+    if (open) {
+      // 페인트 전에 시작 위치를 화면 밖으로 잡아 첫 프레임 깜빡임을 막는다.
+      translateY.setValue(windowHeight);
+      const anim = springTo(0);
+      anim.start(({ finished }) => {
+        if (finished) setMounted(true);
+      });
+      return () => anim.stop();
+    }
+    const anim = springTo(windowHeight);
+    anim.start(({ finished }) => {
+      if (finished) setMounted(false);
+    });
+    return () => anim.stop();
+  }, [open, windowHeight, springTo, translateY]);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     setSheetHeight(event.nativeEvent.layout.height);
@@ -115,12 +164,9 @@ export const TripPlanPanel = ({
           Math.abs(gesture.dy) > Math.abs(gesture.dx),
         onPanResponderGrant: () => translateY.stopAnimation(),
         onPanResponderMove: (_, gesture) => {
-          const dragStartOffset = expanded ? 0 : collapsedOffset;
+          // 열린 상태에서 시작하므로 항상 0(맨 위)에서부터 아래로만 따라간다.
           translateY.setValue(
-            Math.min(
-              collapsedOffset,
-              Math.max(0, dragStartOffset + gesture.dy),
-            ),
+            Math.min(collapsedOffset, Math.max(0, gesture.dy)),
           );
         },
         onPanResponderRelease: (_, gesture) => {
@@ -129,12 +175,12 @@ export const TripPlanPanel = ({
           } else if (gesture.dy >= DRAG_THRESHOLD || gesture.vy >= 0.5) {
             moveTo(false);
           } else {
-            moveTo(expanded);
+            moveTo(true);
           }
         },
-        onPanResponderTerminate: () => moveTo(expanded),
+        onPanResponderTerminate: () => moveTo(true),
       }),
-    [collapsedOffset, expanded, moveTo, translateY],
+    [collapsedOffset, moveTo, translateY],
   );
 
   // 닫아도 폼/추천/rank 상태는 보존한다(패널은 계속 마운트됨) → 다시 열면 이어서 진행.
@@ -232,7 +278,7 @@ export const TripPlanPanel = ({
   // 결과 단계: 이전 → 앞서 건너뛴 rank로 되돌아간다(0에서 멈춤).
   const handlePrev = () => setRankIndex((prev) => Math.max(0, prev - 1));
 
-  if (!open) {
+  if (!visible) {
     return null;
   }
 
@@ -253,11 +299,9 @@ export const TripPlanPanel = ({
         <View {...panResponder.panHandlers}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={
-              expanded ? t("plan.collapse") : t("plan.expand")
-            }
-            accessibilityState={{ expanded }}
-            onPress={() => moveTo(!expanded)}
+            accessibilityLabel={t("plan.collapse")}
+            accessibilityState={{ expanded: true }}
+            onPress={() => moveTo(false)}
             className="items-center pt-2 pb-1"
           >
             <View className="h-1 w-10 rounded-full bg-border" />
