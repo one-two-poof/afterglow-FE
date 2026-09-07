@@ -57,6 +57,8 @@
   "tourism.emptyTitle": "未找到地点",
   "tourism.emptyDescription": "请尝试其他搜索词或类别。",
   "tourism.place.open": "查看{{name}}的详细信息",
+  "tourism.detail.title": "地点信息",
+  "tourism.detail.openMap": "在首页地图中查看",
   "home.filter.all": "全部",
   "home.filter.hospital": "医院",
   "home.filter.attraction": "景点",

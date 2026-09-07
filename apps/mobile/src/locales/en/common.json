@@ -57,6 +57,8 @@
   "tourism.emptyTitle": "No places found",
   "tourism.emptyDescription": "Try another search or category.",
   "tourism.place.open": "View details for {{name}}",
+  "tourism.detail.title": "Place information",
+  "tourism.detail.openMap": "View on home map",
   "home.filter.all": "All",
   "home.filter.hospital": "Hospitals",
   "home.filter.attraction": "Attractions",

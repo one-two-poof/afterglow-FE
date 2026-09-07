@@ -57,6 +57,8 @@
   "tourism.emptyTitle": "검색 결과가 없어요",
   "tourism.emptyDescription": "다른 검색어나 카테고리를 선택해보세요.",
   "tourism.place.open": "{{name}} 상세정보 보기",
+  "tourism.detail.title": "장소 정보",
+  "tourism.detail.openMap": "홈 지도에서 보기",
   "home.filter.all": "전체",
   "home.filter.hospital": "병원",
   "home.filter.attraction": "관광명소",

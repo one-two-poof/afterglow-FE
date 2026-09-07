@@ -57,6 +57,8 @@
   "tourism.emptyTitle": "該当する場所がありません",
   "tourism.emptyDescription": "別の検索語またはカテゴリーをお試しください。",
   "tourism.place.open": "{{name}}の詳細を見る",
+  "tourism.detail.title": "スポット情報",
+  "tourism.detail.openMap": "ホームの地図で見る",
   "home.filter.all": "すべて",
   "home.filter.hospital": "病院",
   "home.filter.attraction": "観光スポット",

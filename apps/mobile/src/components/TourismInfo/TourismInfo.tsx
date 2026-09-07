@@ -1,14 +1,13 @@
 import { FlatList, Pressable, Text, View } from "react-native";
 import { useMemo, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
-import { PlaceDetailSheet } from "@/components/PlaceDetailSheet";
 import { TourismInfoHeader } from "@/components/TourismInfo/TourismInfoHeader";
 import { TourismInfoSkeleton } from "@/components/TourismInfo/TourismInfoSkeleton";
 import { TourismPlaceCard } from "@/components/TourismInfo/TourismPlaceCard";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useTourismPlaces } from "@/hooks/use-tourism-places";
-import { useTourismPlaceActions } from "@/hooks/use-tourism-place-actions";
 import { useI18n } from "@/i18n/i18n-provider";
 import {
   filterTourismAttractions,
@@ -21,8 +20,7 @@ export function TourismInfo() {
   const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<TourismInfoCategory>("all");
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  const [detailExpanded, setDetailExpanded] = useState(true);
+  const router = useRouter();
   const debouncedSearch = useDebounce(search, 300);
   const {
     data: places = [],
@@ -30,8 +28,6 @@ export function TourismInfo() {
     isError,
     refetch,
   } = useTourismPlaces(getTourismBrowseCategory(category), debouncedSearch);
-  const { copyPlace, openInExternalMap } =
-    useTourismPlaceActions(selectedPlace);
   const visiblePlaces = useMemo(
     () =>
       category === "hospital" || category === "accommodation"
@@ -40,32 +36,15 @@ export function TourismInfo() {
     [category, places],
   );
 
-  const selectedDetail = useMemo(
-    () =>
-      selectedPlace
-        ? {
-            id: selectedPlace.id,
-            title: selectedPlace.placeName,
-            subtitle:
-              selectedPlace.primaryTypeName || selectedPlace.categoryName,
-            address: selectedPlace.roadAddressName || selectedPlace.addressName,
-            image: selectedPlace.image || undefined,
-            phone: selectedPlace.phone || undefined,
-            placeType: selectedPlace.placeType,
-            primaryTypeName: selectedPlace.primaryTypeName,
-          }
-        : null,
-    [selectedPlace],
-  );
-
   const chooseCategory = (nextCategory: TourismInfoCategory) => {
     setCategory(nextCategory);
-    setSelectedPlace(null);
   };
 
   const openPlace = (place: Place) => {
-    setSelectedPlace(place);
-    setDetailExpanded(true);
+    router.push({
+      pathname: "/tourism/[placeType]/[id]",
+      params: { placeType: place.placeType, id: String(place.id) },
+    });
   };
 
   return (
@@ -118,17 +97,6 @@ export function TourismInfo() {
           }
         />
       )}
-
-      {selectedDetail ? (
-        <PlaceDetailSheet
-          detail={selectedDetail}
-          expanded={detailExpanded}
-          onExpandedChange={setDetailExpanded}
-          onClose={() => setSelectedPlace(null)}
-          onCopyPress={() => void copyPlace()}
-          onExternalMapPress={() => void openInExternalMap()}
-        />
-      ) : null}
     </SafeAreaView>
   );
 }

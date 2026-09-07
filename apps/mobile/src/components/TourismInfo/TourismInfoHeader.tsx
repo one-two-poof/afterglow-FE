@@ -1,7 +1,7 @@
 import { colors } from "@afterglow/tokens";
 import { Input } from "@afterglow/ui-native";
 import { Search, X } from "lucide-react-native";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { useI18n } from "@/i18n/i18n-provider";
 import type { TourismInfoCategory } from "@/lib/tourism-browse";
@@ -30,7 +30,7 @@ export function TourismInfoHeader({
   const { t } = useI18n();
 
   return (
-    <View className="border-b border-border bg-bg px-5 pt-5 pb-3">
+    <View className="border-border bg-bg px-5 pt-5 pb-3 border-b">
       <View className="mb-5 gap-1">
         <Text className="text-heading-sm text-text">{t("tourism.title")}</Text>
         <Text className="text-body-sm text-text-secondary">
@@ -62,38 +62,40 @@ export function TourismInfoHeader({
       <Text className="mt-5 mb-2 text-label-sm text-text-secondary">
         {t("tourism.category.label")}
       </Text>
-      <View
-        accessibilityRole="radiogroup"
-        className="flex-row flex-wrap gap-2"
-      >
-        {CATEGORIES.map((item) => {
-          const selected = item === category;
-          return (
-            <Pressable
-              key={item}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-              onPress={() => onCategoryChange(item)}
-              className={
-                selected
-                  ? "min-h-10 justify-center rounded-full bg-primary px-4"
-                  : "min-h-10 justify-center rounded-full border border-border bg-surface px-4 active:bg-surface-muted"
-              }
-            >
-              <Text
+      <View accessibilityRole="radiogroup">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerClassName="gap-2 pr-5"
+        >
+          {CATEGORIES.map((item) => {
+            const selected = item === category;
+            return (
+              <Pressable
+                key={item}
+                accessibilityRole="radio"
+                accessibilityState={{ selected }}
+                onPress={() => onCategoryChange(item)}
                 className={
                   selected
-                    ? "text-label-md text-on-action-primary"
-                    : "text-label-md text-text-secondary"
+                    ? "min-h-10 bg-primary px-4 justify-center rounded-full"
+                    : "min-h-10 border-border bg-surface px-4 active:bg-surface-muted justify-center rounded-full border"
                 }
               >
-                {t(`tourism.category.${item}`)}
-              </Text>
-            </Pressable>
-          );
-        })}
+                <Text
+                  className={
+                    selected
+                      ? "text-label-md text-on-action-primary"
+                      : "text-label-md text-text-secondary"
+                  }
+                >
+                  {t(`tourism.category.${item}`)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
-
     </View>
   );
 }

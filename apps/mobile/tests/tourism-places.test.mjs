@@ -9,6 +9,36 @@ import {
   mergeTourismPlaces,
   normalizeTourismSearch,
 } from "../src/lib/tourism-browse.ts";
+import { tourismPlaceToMapParams } from "../src/lib/tourism-place-navigation.ts";
+
+test("creates home map params for a tourism place", () => {
+  assert.deepEqual(
+    tourismPlaceToMapParams({
+      id: 12,
+      placeType: "ATTRACTION",
+      placeName: "경복궁",
+      categoryName: "문화시설",
+      addressName: "서울 종로구",
+      mapX: 126.977,
+      mapY: 37.578,
+      image: "https://example.com/gyeongbokgung.jpg",
+      phone: "02-3700-3900",
+      primaryTypeName: "고궁",
+    }),
+    {
+      tourismPlaceId: "12",
+      tourismPlaceType: "ATTRACTION",
+      tourismPlaceName: "경복궁",
+      tourismPlaceCategory: "문화시설",
+      tourismPlaceAddress: "서울 종로구",
+      tourismPlaceLat: "37.578",
+      tourismPlaceLng: "126.977",
+      tourismPlaceImage: "https://example.com/gyeongbokgung.jpg",
+      tourismPlacePhone: "02-3700-3900",
+      tourismPlacePrimaryTypeName: "고궁",
+    },
+  );
+});
 
 test("keeps only places whose source includes the Tourism API", () => {
   const places = [
