@@ -10,7 +10,8 @@
     "ios": {
       "bundleIdentifier": "com.dunaduneos.afterglow",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": ["nmap", "kakaomap"]
       }
     },
     "android": {

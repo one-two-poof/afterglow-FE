@@ -1,5 +1,5 @@
 import { colors } from "@afterglow/tokens";
-import { Navigation, Phone, X } from "lucide-react-native";
+import { Copy, ExternalLink, Navigation, Phone, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import {
   Animated,
@@ -22,6 +22,8 @@ interface PlaceDetailSheetProps {
   onExpandedChange: (expanded: boolean) => void;
   onClose: () => void;
   onRoutePress: () => void;
+  onCopyPress: () => void;
+  onExternalMapPress: () => void;
 }
 
 const COLLAPSED_CONTENT_HEIGHT = 148;
@@ -33,6 +35,8 @@ export function PlaceDetailSheet({
   onExpandedChange,
   onClose,
   onRoutePress,
+  onCopyPress,
+  onExternalMapPress,
 }: PlaceDetailSheetProps) {
   const { t } = useI18n();
   const { height: windowHeight } = useWindowDimensions();
@@ -182,15 +186,20 @@ export function PlaceDetailSheet({
               className="flex-1 px-5"
               contentContainerClassName="gap-4 py-3"
             >
-              {detail.description ? (
+              {detail.address ? (
                 <View>
                   <Text className="text-label-sm text-text-muted">
                     {t("home.detail.address")}
                   </Text>
                   <Text className="mt-1 text-body-md text-text">
-                    {detail.description}
+                    {detail.address}
                   </Text>
                 </View>
+              ) : null}
+              {detail.description ? (
+                <Text className="text-body-md text-text-secondary">
+                  {detail.description}
+                </Text>
               ) : null}
               {detail.phone ? (
                 <View className="flex-row items-center gap-2">
@@ -199,6 +208,30 @@ export function PlaceDetailSheet({
                 </View>
               ) : null}
             </ScrollView>
+            <View className="mx-5 mb-2 flex-row gap-2">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("home.detail.copyPlace")}
+                onPress={onCopyPress}
+                className="h-11 flex-1 flex-row items-center justify-center gap-2 rounded-[8px] border border-border bg-surface active:bg-surface-muted"
+              >
+                <Copy size={16} color={colors["text-secondary"]} />
+                <Text className="text-label-md text-text">
+                  {t("home.detail.copyPlace")}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("home.detail.openExternalMap")}
+                onPress={onExternalMapPress}
+                className="h-11 flex-1 flex-row items-center justify-center gap-2 rounded-[8px] border border-border bg-surface active:bg-surface-muted"
+              >
+                <ExternalLink size={16} color={colors["text-secondary"]} />
+                <Text className="text-label-md text-text">
+                  {t("home.detail.openExternalMap")}
+                </Text>
+              </Pressable>
+            </View>
             {routeButton}
           </>
         ) : (

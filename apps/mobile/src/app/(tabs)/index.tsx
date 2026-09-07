@@ -15,9 +15,13 @@ import {
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActionSheetIOS,
   ActivityIndicator,
+  Alert,
   type ColorValue,
   Keyboard,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -42,6 +46,13 @@ import {
   type RoutePin,
 } from "@/components/MapLibreMap/types";
 import { getCurrentLocation } from "@/lib/location";
+import {
+  buildMapUrl,
+  copyPlaceToClipboard,
+  type MapProvider,
+} from "@/lib/place-actions";
+import { findClosestPlaceAddress } from "@/lib/place-match";
+import { fetchPlaces } from "@/lib/places";
 import { fetchRouteLines, ROUTE_COLORS, type RouteLine } from "@/lib/route";
 import { TripPlanPanel } from "@/components/TripPlanPanel";
 import { useAccessToken } from "@/hooks/use-access-token";
@@ -147,12 +158,25 @@ type LatLngPoint = { lat: number; lng: number };
 const placeToDetail = (place: Place): MarkerDetail => ({
   title: place.placeName,
   subtitle: place.categoryName || place.categoryGroupName || undefined,
-  description: place.roadAddressName || place.addressName || undefined,
+  address: place.roadAddressName || place.addressName || undefined,
   image: place.image || undefined,
   phone: place.phone || undefined,
   placeType: place.placeType,
   primaryTypeName: place.primaryTypeName,
 });
+
+const resolveMarkerAddress = async (marker: MapMarker) => {
+  if (!marker.detail || marker.detail.address) {
+    return marker.detail?.address;
+  }
+
+  const places = await fetchPlaces(marker.detail.title);
+  return findClosestPlaceAddress(places, {
+    name: marker.detail.title,
+    lat: marker.lat,
+    lng: marker.lng,
+  });
+};
 
 /**
  * 홈 = 전체화면 지도 + 상단 검색 오버레이 + 하단 카테고리/코스 태그 + 여행 계획(+)
@@ -255,6 +279,37 @@ export default function HomeScreen() {
     () => (selectedCourse ? savedCourseToMapDecoration(selectedCourse) : null),
     [selectedCourse],
   );
+
+  useEffect(() => {
+    if (!detail?.detail || detail.detail.address) return;
+
+    let active = true;
+    void resolveMarkerAddress(detail)
+      .then((address) => {
+        if (!active || !address) return;
+        setDetail((current) => {
+          if (
+            !current?.detail ||
+            current.lat !== detail.lat ||
+            current.lng !== detail.lng ||
+            current.detail.title !== detail.detail?.title
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            detail: { ...current.detail, address },
+          };
+        });
+      })
+      .catch(() => {
+        // Address enrichment is optional; keep the course detail usable.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [detail]);
 
   // 카테고리 태그(병원/관광명소/숙소) 선택 시 현재 뷰포트의 장소를 조회.
   // "전체"·코스 선택 시엔 null이라 요청하지 않는다. 뷰포트가 바뀌면 그 영역으로 재조회.
@@ -455,6 +510,86 @@ export default function HomeScreen() {
     setPicking(null);
     setRouteLines([]);
     setRoutePlanOpen(true);
+  };
+
+  const copySelectedPlace = async () => {
+    if (!detail?.detail) return;
+
+    try {
+      const address =
+        detail.detail.address ?? (await resolveMarkerAddress(detail));
+      await copyPlaceToClipboard(detail.detail.title, address);
+      showToast(t("home.detail.copySuccess"));
+    } catch {
+      showToast(t("home.detail.copyFailed"));
+    }
+  };
+
+  const openSelectedPlaceInExternalMap = async () => {
+    if (!detail?.detail) return;
+
+    const address =
+      detail.detail.address ??
+      (await resolveMarkerAddress(detail).catch(() => undefined));
+    const destination = {
+      latitude: detail.lat,
+      longitude: detail.lng,
+      label: detail.detail.title,
+      address,
+    };
+    const openProvider = async (provider: MapProvider) => {
+      try {
+        await Linking.openURL(buildMapUrl(provider, destination));
+      } catch {
+        showToast(t("home.detail.externalMapFailed"));
+      }
+    };
+
+    if (Platform.OS === "web") {
+      await openProvider("google");
+      return;
+    }
+
+    const nativeProviders = await Promise.all(
+      (["naver", "kakao"] as const).map(async (provider) => ({
+        provider,
+        installed: await Linking.canOpenURL(
+          provider === "naver" ? "nmap://" : "kakaomap://",
+        ).catch(() => false),
+      })),
+    );
+    const providers: MapProvider[] = [
+      ...nativeProviders
+        .filter(({ installed }) => installed)
+        .map(({ provider }) => provider),
+      "google",
+      ...(Platform.OS === "ios" ? (["apple"] as const) : []),
+    ];
+    const labels = providers.map((provider) =>
+      t(`home.detail.mapProvider.${provider}`),
+    );
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: t("home.detail.mapPickerTitle"),
+          options: [...labels, t("common.cancel")],
+          cancelButtonIndex: labels.length,
+        },
+        (index) => {
+          const provider = providers[index];
+          if (provider) void openProvider(provider);
+        },
+      );
+      return;
+    }
+
+    Alert.alert(t("home.detail.mapPickerTitle"), undefined, [
+      ...providers.map((provider, index) => ({
+        text: labels[index],
+        onPress: () => void openProvider(provider),
+      })),
+    ]);
   };
 
   // 설정 패널 닫기(경로 안내 취소). 상세 카드는 그대로 두어 다시 열 수 있게 한다.
@@ -786,6 +921,8 @@ export default function HomeScreen() {
           onExpandedChange={setPlaceDetailExpanded}
           onClose={closeDetail}
           onRoutePress={openRoutePlan}
+          onCopyPress={() => void copySelectedPlace()}
+          onExternalMapPress={() => void openSelectedPlaceInExternalMap()}
         />
       )}
 
