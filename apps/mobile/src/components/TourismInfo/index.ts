@@ -1,0 +1,1 @@
+export { TourismInfo } from "./TourismInfo";
