@@ -16,16 +16,16 @@ import { Pressable, Text, View } from "react-native";
 import { useI18n } from "@/i18n/i18n-provider";
 
 /**
- * 웹 `@afterglow/ui` Calendar의 RN 이식본.
+ * 날짜 선택 캘린더 컴포넌트.
  *
  * 로직(월 매트릭스, 범위 선택 규칙 nextRange 등)은 `@afterglow/utils`의 순수 TS
  * date-utils를 그대로 재사용한다. 시각/레이아웃만 RN으로 다시 구현했다.
  *
- * 웹과의 차이:
+ * 구현 메모:
  * - `<div>`/`<button>` → `View`/`Pressable`. 텍스트는 반드시 `<Text>`로 감싼다.
- * - 웹은 CSS Grid(`grid-cols-7`)로 7열을 잡지만 RN엔 grid가 없으므로, 각 주를
+ * - RN엔 CSS Grid가 없으므로 각 주를
  *   `flex-row`로 만들고 각 셀을 `flex-1`로 두어 7등분한다.
- * - 범위 하이라이트 바: 웹은 셀 안 absolute + 반폭 span(left-1/2/right-1/2 = 50%).
+ * - 범위 하이라이트 바: 셀 안 absolute + 반폭 span(left-1/2 / right-1/2 = 50%).
  *   RN에서도 셀 안에 `position:absolute` 바를 깔고 그 위에 endpoint 원을 얹는다.
  *   NativeWind에서 `left-1/2`가 항상 안정적이진 않아 바 위치는 style 객체로 직접
  *   퍼센트를 지정한다(아래 주석 참고).
@@ -185,7 +185,7 @@ const DayCell = ({
   const showBar = hasRange && !isSingle && (inMiddle || isEndpoint);
 
   // 하이라이트 바 위치: 중간 날짜는 셀 전체 폭, 시작일은 오른쪽 절반(left 50%),
-  // 종료일은 왼쪽 절반(right 50%). 웹의 left-1/2 / right-1/2와 동일한 의미를
+  // 종료일은 왼쪽 절반(right 50%). left-1/2 / right-1/2와 동일한 의미를
   // 퍼센트 style로 직접 지정한다(NativeWind의 분수 위치보다 안정적).
   const barPosition = inMiddle
     ? { left: 0, right: 0 }

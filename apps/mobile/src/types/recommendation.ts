@@ -1,5 +1,5 @@
 /**
- * 통합 추천 코스 API(ML 서버) 응답 계약. 웹 types/recommendation.ts의 타입 부분.
+ * 통합 추천 코스 API(ML 서버) 응답 계약.
  * (요청 페이로드는 components/TripPlanPanel/types.ts 의 TripPlanPayload)
  *
  * 구조: daily_recommendations[] = rank별 "완성된 다일 일정" 하나. 사용자는 rank 단위로
@@ -27,7 +27,7 @@ export const COURSE_DAY_COLORS = [
 /**
  * 코스 좌표(mapX=위도/mapY=경도) → 지도 좌표(lat/lng).
  * ⚠️ BE 장소용 toLatLng(mapX=경도)와 **반대 관례**다. ML 추천 서버의 코스 응답은
- * mapX에 위도, mapY에 경도를 담아 내려주므로 여기서만 별도로 변환한다(웹과 동일).
+ * mapX에 위도, mapY에 경도를 담아 내려주므로 여기서만 별도로 변환한다.
  */
 const courseToLatLng = (point: MapPoint): LatLng => ({
   lat: point.mapX,
@@ -148,7 +148,7 @@ const placeToDetail = (place: RecommendedPlace): MarkerDetail => {
  * 추천 코스(RecommendedCourse)의 "출발지 → 도착지" 두 지점만 마커로 찍는다.
  * - 출발지 = 코스의 맨 처음 지점(첫날 start_location)
  * - 도착지 = 코스의 맨 마지막 지점(마지막 방문 장소)
- * (웹 courseToMarkers와 동일 — 경로 API 연동 전 임시 표시)
+ * (경로 API 연동 전 임시 표시)
  */
 export function courseToMarkers(course: RecommendedCourse): CourseMarker[] {
   const points: (MapPoint & { name?: string; place_name?: string })[] =
@@ -179,7 +179,7 @@ export function courseToMarkers(course: RecommendedCourse): CourseMarker[] {
 
 /**
  * 저장된 코스(SavedCourse)의 모든 지점을 마커로.
- * 각 날의 출발지 + 방문 장소 전체를 이름 라벨과 함께 반환한다(웹과 동일).
+ * 각 날의 출발지 + 방문 장소 전체를 이름 라벨과 함께 반환한다.
  */
 export function savedCourseToMarkers(course: SavedCourse): CourseMarker[] {
   return savedCourseToMapDecoration(course).markers;

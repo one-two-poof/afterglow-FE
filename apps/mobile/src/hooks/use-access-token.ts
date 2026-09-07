@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import { getAccessToken, subscribeAccessToken } from "@/lib/auth";
 
 /**
- * 액세스 토큰을 반응형으로 읽는다 (웹 use-access-token의 앱 버전).
+ * 액세스 토큰을 반응형으로 읽는다.
  * - `undefined` : 아직 확인 전(hydrate 전) → 로딩 스켈레톤
  * - `null`      : 토큰 없음 → 로그인 안내
  * - `string`    : 로그인됨

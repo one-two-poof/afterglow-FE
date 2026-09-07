@@ -15,7 +15,7 @@ export interface TreatmentDateStepProps {
   onAssign: (treatment: string, date: string) => void;
 }
 
-/** 선택한 시술별로 받을 날짜(Day)를 매칭. 웹 grid(repeat days) → RN flex-row flex-1 */
+/** 선택한 시술별로 받을 날짜(Day)를 매칭. */
 export function TreatmentDateStep({
   treatments,
   days,

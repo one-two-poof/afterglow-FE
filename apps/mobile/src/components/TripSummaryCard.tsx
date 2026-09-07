@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 
 import { useI18n } from "@/i18n/i18n-provider";
 
-/** 선택한 여행 기간(시작·종료일) 요약 카드. 웹 Calendar/TripSummaryCard의 RN 버전. */
+/** 선택한 여행 기간(시작·종료일) 요약 카드. */
 export interface TripSummaryCardProps {
   range: DateRange;
   className?: string;

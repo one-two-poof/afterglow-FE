@@ -1,5 +1,5 @@
 /**
- * 경로(그늘 경로) API 클라이언트. 웹 lib/route.ts의 앱 버전.
+ * 경로(그늘 경로) API 클라이언트.
  * 두 지점(from→to)을 받아 실제 경로(GeoJSON LineString)를 돌려준다.
  * 응답 routes[]에는 최단(shortest)·그늘(shady) 두 경로가 함께 온다.
  * at은 항상 현재 시각(그림자/그늘 계산 기준).

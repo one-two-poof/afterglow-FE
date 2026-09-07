@@ -20,9 +20,9 @@ export interface PlaceStepProps {
 }
 
 /**
- * 관광지 선택 단계 (모든 날짜를 한 화면에서). 웹 PlaceStep의 RN 버전.
+ * 관광지 선택 단계 (모든 날짜를 한 화면에서).
  *
- * 웹은 검색 결과를 절대배치 오버레이로 띄웠지만, RN에서는 패널이 이미 ScrollView라
+ * RN에서는 패널이 이미 ScrollView라
  * 오버레이/중첩 스크롤이 까다롭다. 그래서 결과를 검색창 아래 인라인으로 렌더한다
  * (선택하면 결과가 닫히고 날짜 슬롯이 갱신됨).
  */
@@ -92,7 +92,7 @@ export function PlaceStep({ days, selected, onSelect }: PlaceStepProps) {
         }
       />
 
-      {/* 검색 결과 — 인라인(웹은 오버레이) */}
+      {/* 검색 결과 — 인라인 */}
       {showResults && (
         <View className="gap-2 rounded-[12px] border border-border bg-bg p-2">
           {results.length > 0 ? (

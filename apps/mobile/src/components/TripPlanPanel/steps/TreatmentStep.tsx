@@ -176,7 +176,7 @@ export interface TreatmentStepProps {
   onToggle: (name: string) => void;
 }
 
-/** 시술 종류 선택 (다중 선택). name 문자열을 그대로 제출. 웹은 grid-cols-2 → RN은 2열 wrap */
+/** 시술 종류 선택 (다중 선택). name 문자열을 그대로 제출. 2열 wrap */
 export function TreatmentStep({ selected, onToggle }: TreatmentStepProps) {
   const { t } = useI18n();
   return (

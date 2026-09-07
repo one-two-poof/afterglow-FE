@@ -1,1 +1,0 @@
-export { MyCourse } from "./MyCourse";

@@ -1,5 +1,5 @@
 /**
- * 장소(숙소·병원 등) 목록 API 클라이언트. 웹 lib/places의 앱 버전.
+ * 장소(숙소·병원 등) 목록 API 클라이언트.
  * 인증 헤더 첨부·에러 정규화는 apiClient 인터셉터(lib/axios, PR 2)가 담당한다.
  */
 import type { MapBounds } from "@/components/MapLibreMap/types";
@@ -43,7 +43,7 @@ export async function fetchPlaces(name?: string): Promise<Place[]> {
   return sanitize(data);
 }
 
-/** 지도 카테고리 필터 종류 (웹 lib/places와 동일). */
+/** 지도 카테고리 필터 종류. */
 export type PlaceCategory = "hospital" | "accommodation" | "attraction";
 
 /**

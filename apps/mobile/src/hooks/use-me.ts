@@ -4,7 +4,7 @@ import { UnauthorizedError } from "@/lib/auth";
 import { getMe } from "@/lib/me";
 
 /**
- * 로그인한 사용자 정보를 조회한다. 웹 use-me와 동일.
+ * 로그인한 사용자 정보를 조회한다.
  * @param enabled 토큰 존재가 확인된 뒤에만 요청하도록 제어
  */
 export const useMe = (enabled: boolean) =>
