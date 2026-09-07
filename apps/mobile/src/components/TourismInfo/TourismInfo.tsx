@@ -1,11 +1,4 @@
-import { colors } from "@afterglow/tokens";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
 import { useMemo, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -19,35 +12,32 @@ import { useTourismPlaceActions } from "@/hooks/use-tourism-place-actions";
 import { useI18n } from "@/i18n/i18n-provider";
 import {
   filterTourismAttractions,
-  type TourismAttractionCategory,
-  type TourismBrowseCategory,
+  getTourismBrowseCategory,
+  type TourismInfoCategory,
 } from "@/lib/tourism-browse";
 import type { Place } from "@/types/place";
 
 export function TourismInfo() {
   const { t } = useI18n();
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<TourismBrowseCategory>("all");
-  const [attractionCategory, setAttractionCategory] =
-    useState<TourismAttractionCategory>("all");
+  const [category, setCategory] = useState<TourismInfoCategory>("all");
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [detailExpanded, setDetailExpanded] = useState(true);
   const debouncedSearch = useDebounce(search, 300);
   const {
     data: places = [],
     isLoading,
-    isFetching,
     isError,
     refetch,
-  } = useTourismPlaces(category, debouncedSearch);
+  } = useTourismPlaces(getTourismBrowseCategory(category), debouncedSearch);
   const { copyPlace, openInExternalMap } =
     useTourismPlaceActions(selectedPlace);
   const visiblePlaces = useMemo(
     () =>
-      category === "attraction"
-        ? filterTourismAttractions(places, attractionCategory)
-        : places,
-    [attractionCategory, category, places],
+      category === "hospital" || category === "accommodation"
+        ? places
+        : filterTourismAttractions(places, category),
+    [category, places],
   );
 
   const selectedDetail = useMemo(
@@ -68,14 +58,8 @@ export function TourismInfo() {
     [selectedPlace],
   );
 
-  const chooseCategory = (nextCategory: TourismBrowseCategory) => {
+  const chooseCategory = (nextCategory: TourismInfoCategory) => {
     setCategory(nextCategory);
-    setAttractionCategory("all");
-    setSelectedPlace(null);
-  };
-
-  const chooseAttractionCategory = (nextCategory: TourismAttractionCategory) => {
-    setAttractionCategory(nextCategory);
     setSelectedPlace(null);
   };
 
@@ -89,19 +73,9 @@ export function TourismInfo() {
       <TourismInfoHeader
         search={search}
         category={category}
-        attractionCategory={attractionCategory}
         onSearchChange={setSearch}
         onCategoryChange={chooseCategory}
-        onAttractionCategoryChange={chooseAttractionCategory}
       />
-      <View className="px-5 py-3 flex-row items-center justify-between">
-        <Text className="text-label-md text-text">
-          {t("tourism.results", { count: visiblePlaces.length })}
-        </Text>
-        {isFetching && !isLoading ? (
-          <ActivityIndicator size="small" color={colors.primary} />
-        ) : null}
-      </View>
 
       {isLoading ? (
         <TourismInfoSkeleton />

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   filterTourismApiPlaces,
   filterTourismAttractions,
+  getTourismBrowseCategory,
   getTourismBrowseCategories,
   mergeTourismPlaces,
   normalizeTourismSearch,
@@ -40,6 +41,16 @@ test("browses only the selected tourism category", () => {
   assert.deepEqual(getTourismBrowseCategories("hospital"), ["hospital"]);
 });
 
+test("maps the flat tourism filters to the required API category", () => {
+  assert.equal(getTourismBrowseCategory("all"), "all");
+  assert.equal(getTourismBrowseCategory("culture"), "attraction");
+  assert.equal(getTourismBrowseCategory("nature"), "attraction");
+  assert.equal(getTourismBrowseCategory("shopping"), "attraction");
+  assert.equal(getTourismBrowseCategory("experience"), "attraction");
+  assert.equal(getTourismBrowseCategory("accommodation"), "accommodation");
+  assert.equal(getTourismBrowseCategory("hospital"), "hospital");
+});
+
 test("uses the backend match-all value for a blank search", () => {
   assert.equal(normalizeTourismSearch("   "), "%");
   assert.equal(normalizeTourismSearch("  경복궁  "), "경복궁");
@@ -74,7 +85,7 @@ test("keeps places from different categories when their numeric ids overlap", ()
   );
 });
 
-test("groups attractions into the five approved browse categories", () => {
+test("groups attractions into the four approved browse categories", () => {
   const places = [
     { id: 1, primaryTypeName: "미술관", categoryName: "문화시설" },
     { id: 2, primaryTypeName: "공원", categoryName: "자연" },
@@ -96,12 +107,8 @@ test("groups attractions into the five approved browse categories", () => {
     [3],
   );
   assert.deepEqual(
-    filterTourismAttractions(places, "wellness").map(({ id }) => id),
-    [4],
-  );
-  assert.deepEqual(
     filterTourismAttractions(places, "experience").map(({ id }) => id),
-    [5],
+    [4, 5],
   );
   assert.deepEqual(filterTourismAttractions(places, "all"), places);
 });

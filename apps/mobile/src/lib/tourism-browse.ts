@@ -11,8 +11,11 @@ export type TourismAttractionCategory =
   | "culture"
   | "nature"
   | "shopping"
-  | "wellness"
   | "experience";
+export type TourismInfoCategory =
+  | TourismAttractionCategory
+  | "accommodation"
+  | "hospital";
 
 type AttractionCategoryFields = Pick<
   Place,
@@ -34,10 +37,6 @@ const ATTRACTION_CATEGORY_PATTERNS: Array<{
   {
     category: "shopping",
     pattern: /쇼핑|백화점|시장|면세|드럭스토어/i,
-  },
-  {
-    category: "wellness",
-    pattern: /뷰티|찜질|사우나|안마|스파|마사지|웰니스/i,
   },
 ];
 
@@ -79,6 +78,15 @@ export function getTourismBrowseCategories(
   return category === "all"
     ? ["hospital", "attraction", "accommodation"]
     : [category];
+}
+
+export function getTourismBrowseCategory(
+  category: TourismInfoCategory,
+): TourismBrowseCategory {
+  if (category === "accommodation" || category === "hospital") {
+    return category;
+  }
+  return category === "all" ? "all" : "attraction";
 }
 
 export function normalizeTourismSearch(search: string): string {
