@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Animated,
   BackHandler,
-  Image,
   KeyboardAvoidingView,
   type LayoutChangeEvent,
   PanResponder,
@@ -21,6 +20,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+import { Image } from "@/components/Image";
 import { useCourseSelection } from "@/hooks/use-course-selection";
 import { useMe } from "@/hooks/use-me";
 import { useI18n } from "@/i18n/i18n-provider";
@@ -283,6 +283,9 @@ export const TripPlanPanel = ({
               <Image
                 source={{ uri: me.profileImageUrl }}
                 accessibilityIgnoresInvertColors
+                cachePolicy="memory-disk"
+                recyclingKey={me.profileImageUrl}
+                transition={100}
                 className="size-8 rounded-full border border-border"
               />
             ) : null}

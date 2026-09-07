@@ -1,5 +1,7 @@
+import { Text, View } from "react-native";
+
+import { Image } from "@/components/Image";
 import { type AuthUser } from "@/lib/auth";
-import { Image, Text, View } from "react-native";
 
 /** 이름에서 이니셜 한 글자 추출 (프로필 이미지가 없을 때 폴백 아바타용) */
 const getInitial = (name: string) => {
@@ -13,6 +15,9 @@ function Avatar({ name, src }: { name: string; src?: string }) {
       <Image
         source={{ uri: src }}
         accessibilityIgnoresInvertColors
+        cachePolicy="memory-disk"
+        recyclingKey={src}
+        transition={100}
         className="size-20 rounded-full border border-border"
       />
     );
