@@ -43,3 +43,6 @@ example
 # generated native folders
 /ios
 /android
+
+# Maestro E2E 아티팩트(스크린샷/로그)
+.maestro/artifacts/

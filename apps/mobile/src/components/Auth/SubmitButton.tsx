@@ -6,6 +6,8 @@ interface SubmitButtonProps {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
+  /** E2E 선택자용. 제목과 버튼 텍스트가 겹칠 수 있어 id로 특정한다. */
+  testID?: string;
 }
 
 /**
@@ -18,11 +20,13 @@ export function SubmitButton({
   onPress,
   loading = false,
   disabled = false,
+  testID,
 }: SubmitButtonProps) {
   const isDisabled = disabled || loading;
 
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}

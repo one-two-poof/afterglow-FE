@@ -1,0 +1,63 @@
+# 로그인 유효성 검증 E2E
+# 내 정보 → (로그인돼 있으면 로그아웃) → "로그인하기" → 로그인 화면 →
+# 빈 값/잘못된 이메일 제출 시 에러 문구 확인. 백엔드/계정 불필요.
+# 로그인 입력·버튼은 testID(id:, 정확 매칭), 탭·설정행은 조합 라벨이라 부분일치 정규식(.*...*).
+#
+# 참고1: 인증 토큰은 expo-secure-store(iOS Keychain)에 저장돼 Maestro clearState로는 안 지워진다.
+#        → 미로그인 상태는 clearState가 아니라 UI 로그아웃으로 보장. (clearState는 dev-client의
+#          Metro 연결 URL까지 지워 dev 런처로 튀는 문제도 있어 미사용)
+# 참고2: 탭 접근성 라벨은 "내 정보, tab, 4 of 4"처럼 장식이 붙어 정확 매칭이 안 된다 → .*...* 사용.
+appId: com.dunaduneos.afterglow
+---
+- launchApp # clearState 없이 재실행 → dev-client가 마지막 Metro URL로 자동 재연결
+- extendedWaitUntil:
+    visible: ".*내 정보.*"
+    timeout: 90000
+
+# 0) 미로그인 상태 보장: 내 정보에서 로그인돼 있으면 로그아웃
+- tapOn: ".*내 정보.*"
+- runFlow:
+    when:
+      visible: ".*로그아웃.*"
+    commands:
+      - tapOn: ".*로그아웃.*" # 설정의 로그아웃 행
+      # 로그아웃 확인 모달이 생기면 확인 버튼을 누른다. 현재 앱엔 모달이 없어 SKIP된다.
+      # ⚠️ 다른 브랜치에서 로그아웃 확인 모달을 회원 탈퇴처럼 Alert.alert로 구현할 것:
+      #    제목="로그아웃" / 메시지="로그아웃하면 다시 로그인해야 이용할 수 있어요. 정말 로그아웃할까요?"
+      #    취소 버튼="취소" / 확인 버튼="확인"
+      - runFlow:
+          when:
+            visible: "확인"
+          commands:
+            - tapOn: "확인" # 모달 확인 버튼
+      - assertVisible: ".*로그인하기.*" # 게스트 화면으로 전환 확인
+
+# 1) 게스트 내 정보 → "로그인하기" → 로그인 화면
+- assertVisible: ".*로그인하기.*"
+- takeScreenshot: "01-my-info-guest"
+- tapOn: ".*로그인하기.*"
+# 화면 전환 지연을 흡수 (assertVisible 기본 타임아웃보다 넉넉히)
+- extendedWaitUntil:
+    visible:
+      id: "login-email-input"
+    timeout: 15000
+- assertVisible:
+    id: "login-password-input"
+- takeScreenshot: "02-login-screen"
+
+# 2) 빈 값 제출 → 필수 입력 에러
+- tapOn:
+    id: "login-submit-button"
+- assertVisible: "이메일을 입력해주세요."
+- assertVisible: "비밀번호를 입력해주세요."
+- takeScreenshot: "03-empty-errors"
+
+# 3) 잘못된 이메일 형식 → 형식 에러
+- tapOn:
+    id: "login-email-input"
+- inputText: "not-an-email"
+- hideKeyboard
+- tapOn:
+    id: "login-submit-button"
+- assertVisible: "올바른 이메일 형식이 아니에요."
+- takeScreenshot: "04-invalid-email-error"
