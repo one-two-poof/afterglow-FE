@@ -16,6 +16,11 @@ appId: com.dunaduneos.afterglow
 
 # 0) 미로그인 상태 보장: 내 정보에서 로그인돼 있으면 로그아웃
 - tapOn: ".*내 정보.*"
+# my-page 로딩(skeleton) 대기: "언어 설정" 행은 로그인/게스트 양쪽에 항상 있어 로딩 완료 신호로 사용.
+# (이 대기가 없으면 로딩 중에 "로그아웃" 체크가 SKIP돼 로그인 상태가 유지됨)
+- extendedWaitUntil:
+    visible: ".*언어 설정.*"
+    timeout: 15000
 - runFlow:
     when:
       visible: ".*로그아웃.*"

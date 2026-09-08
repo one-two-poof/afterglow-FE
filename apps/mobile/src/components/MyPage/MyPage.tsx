@@ -40,8 +40,17 @@ export function MyPage() {
   }, [isError, error]);
 
   const handleLogout = () => {
-    clearAccessToken();
-    queryClient.removeQueries({ queryKey: ["me"] });
+    Alert.alert(t("account.logoutTitle"), t("account.logoutMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("account.logoutConfirm"),
+        style: "destructive",
+        onPress: () => {
+          clearAccessToken();
+          queryClient.removeQueries({ queryKey: ["me"] });
+        },
+      },
+    ]);
   };
 
   const deleteAccountMutation = useMutation({
