@@ -153,6 +153,7 @@ export function SignUp() {
     >
       <View className="gap-4">
         <Input
+          testID="signup-email-input"
           label={t("login.emailLabel")}
           placeholder={t("login.emailPlaceholder")}
           value={email}
@@ -219,6 +220,7 @@ export function SignUp() {
         )}
 
         <PasswordInput
+          testID="signup-password-input"
           label={t("login.passwordLabel")}
           placeholder={t("login.passwordPlaceholder")}
           helperText={errors.password ? undefined : t("signup.passwordHint")}
@@ -233,6 +235,7 @@ export function SignUp() {
           returnKeyType="next"
         />
         <PasswordInput
+          testID="signup-password-confirm-input"
           label={t("signup.passwordConfirmLabel")}
           placeholder={t("signup.passwordConfirmPlaceholder")}
           value={passwordConfirm}
@@ -249,6 +252,7 @@ export function SignUp() {
       </View>
 
       <SubmitButton
+        testID="signup-submit-button"
         label={t("signup.submit")}
         onPress={handleSignUp}
         loading={isSubmitting}

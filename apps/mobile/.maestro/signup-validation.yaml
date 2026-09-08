@@ -1,0 +1,120 @@
+# 회원가입 유효성 검증 E2E
+# 게스트 상태 보장 → 로그인 화면 → "회원가입" → 클라이언트 유효성 검사 4종 + 이메일 미인증 토스트.
+# 백엔드/계정 불필요(이메일 인증 코드 발송은 건드리지 않는다).
+#
+# 검증 규칙은 SignUp.tsx의 validate()/handleSignUp() 기준:
+#   빈 값 → 필수 / 이메일 형식 / 비밀번호 8자 미만 / 비밀번호 확인 불일치 → 인라인 에러,
+#   모두 통과해도 이메일 인증 전이면 제출이 막히고 토스트가 뜬다.
+#
+# 셀렉터 주의: 입력·버튼은 testID(id:, 정확 매칭). 비밀번호/비밀번호 확인은 화면상 거의 같아
+#             텍스트로는 구분이 안 되므로 testID가 필수다.
+#
+# 키보드 주의(중요):
+# - 필드 사이를 옮길 때 hideKeyboard를 쓰지 않는다. 키보드를 내렸다가 바로 다음 필드를 탭하면
+#   포커스가 제대로 잡히기 전에 타이핑이 시작돼 입력이 잘리고("short1" → "s"),
+#   이어지는 hideKeyboard는 내릴 키보드가 없어 실패한다.
+#   → 키보드는 띄워둔 채 다음 필드를 탭하고, 제출 직전에만 한 번 내린다.
+# - 탭 직후에는 waitForAnimationToEnd로 키보드/포커스 전환이 끝나길 기다린 뒤 입력한다.
+appId: com.dunaduneos.afterglow
+---
+- launchApp
+# 탭 바만 보고 진행하면 아직 JS가 바쁜 상태라 탭 탭이 씹힌다.
+# 홈 FAB(home.plan.open)까지 기다려 첫 화면 렌더가 끝난 걸 확인한다.
+- extendedWaitUntil:
+    visible: ".*여행 계획 짜기.*"
+    timeout: 90000
+
+# 0) 미로그인 상태 보장 (끝나면 "내 정보" 탭 + 게스트 화면)
+- runFlow: subflows/ensure-logged-out.yaml
+
+# 1) 내 정보 → 로그인 화면 → "회원가입" 링크 → 회원가입 화면
+- tapOn: ".*로그인하기.*"
+- extendedWaitUntil:
+    visible:
+      id: "login-email-input"
+    timeout: 15000
+- tapOn: "회원가입" # login.goSignUp (로그인 화면 하단 링크)
+- extendedWaitUntil:
+    visible:
+      id: "signup-email-input"
+    timeout: 15000
+- assertVisible:
+    id: "signup-password-confirm-input"
+- takeScreenshot: "01-signup-screen"
+
+# 2) 빈 값 제출 → 필수 입력 에러
+#    (비밀번호/비밀번호 확인이 둘 다 빈 값이면 서로 같으므로 불일치 에러는 뜨지 않는다)
+- tapOn:
+    id: "signup-submit-button"
+- assertVisible: "이메일을 입력해주세요."
+- assertVisible: "비밀번호를 입력해주세요."
+- takeScreenshot: "02-empty-errors"
+
+# 3) 잘못된 이메일 형식 → 형식 에러
+- tapOn:
+    id: "signup-email-input"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: "not-an-email"
+- hideKeyboard
+- tapOn:
+    id: "signup-submit-button"
+- assertVisible: "올바른 이메일 형식이 아니에요."
+- takeScreenshot: "03-invalid-email-error"
+
+# 4) 비밀번호 8자 미만 → 길이 에러
+#    이메일을 유효하게 고치고, 비밀번호/확인을 같은 짧은 값으로 넣어 길이 에러만 남긴다.
+- tapOn:
+    id: "signup-email-input"
+- waitForAnimationToEnd:
+    timeout: 5000
+- eraseText
+- inputText: "e2e-signup@example.com"
+- tapOn:
+    id: "signup-password-input"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: "short1"
+- tapOn:
+    id: "signup-password-confirm-input"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: "short1"
+- hideKeyboard
+- tapOn:
+    id: "signup-submit-button"
+- assertVisible: "비밀번호는 8자 이상이어야 해요."
+- takeScreenshot: "04-password-too-short-error"
+
+# 5) 비밀번호 확인 불일치 → 불일치 에러
+- tapOn:
+    id: "signup-password-input"
+- waitForAnimationToEnd:
+    timeout: 5000
+- eraseText
+- inputText: "password123"
+- tapOn:
+    id: "signup-password-confirm-input"
+- waitForAnimationToEnd:
+    timeout: 5000
+- eraseText
+- inputText: "password124"
+- hideKeyboard
+- tapOn:
+    id: "signup-submit-button"
+- assertVisible: "비밀번호가 일치하지 않아요."
+- takeScreenshot: "05-password-mismatch-error"
+
+# 6) 입력은 모두 유효하지만 이메일 미인증 → 제출 차단 + 토스트
+#    토스트는 2.5초 뒤 사라지므로 제출 직후 바로 단언한다.
+- tapOn:
+    id: "signup-password-confirm-input"
+- waitForAnimationToEnd:
+    timeout: 5000
+- eraseText
+- inputText: "password123"
+- hideKeyboard
+- tapOn:
+    id: "signup-submit-button"
+- assertVisible: "이메일 인증을 완료해주세요."
+- takeScreenshot: "06-email-not-verified-toast"
