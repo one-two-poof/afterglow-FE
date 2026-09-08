@@ -98,6 +98,7 @@ export function Login() {
     >
       <View className="gap-4">
         <Input
+          testID="login-email-input"
           label={t("login.emailLabel")}
           placeholder={t("login.emailPlaceholder")}
           value={email}
@@ -114,6 +115,7 @@ export function Login() {
           returnKeyType="next"
         />
         <PasswordInput
+          testID="login-password-input"
           label={t("login.passwordLabel")}
           placeholder={t("login.passwordPlaceholder")}
           value={password}
@@ -130,6 +132,7 @@ export function Login() {
       </View>
 
       <SubmitButton
+        testID="login-submit-button"
         label={t("login.submit")}
         onPress={handleEmailLogin}
         loading={isSubmitting}
