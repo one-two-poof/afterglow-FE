@@ -14,4 +14,9 @@ export const env = {
   aiApiUrl: process.env.EXPO_PUBLIC_AI_API_URL,
   /** 건물 PMTiles 타일 URL (지도, PR 14~) */
   buildingsPmtilesUrl: process.env.EXPO_PUBLIC_BUILDINGS_PMTILES_URL,
+  /**
+   * Sentry DSN. 없으면 에러 리포팅이 통째로 꺼진다(lib/monitoring.ts).
+   * DSN은 공개돼도 되는 값이라 EXPO_PUBLIC_로 두고 eas.json에 넣어도 된다.
+   */
+  sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
 } as const;
