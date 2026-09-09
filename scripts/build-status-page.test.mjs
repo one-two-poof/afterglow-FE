@@ -5,6 +5,7 @@ import {
   parseHistory,
   renderStatusPage,
   summarizeHealth,
+  worstTone,
 } from "./build-status-page.mjs";
 
 const NOW = Date.parse("2026-09-09T06:00:00.000Z");
@@ -154,4 +155,54 @@ test("실패가 많아도 카드는 5건까지만 나열하고 나머지는 건�
   assert.match(html, /flow-4/);
   assert.doesNotMatch(html, /flow-5/);
   assert.match(html, /외 3건/);
+});
+
+test("개요 탭은 셋 중 가장 나쁜 상태를 대표한다", () => {
+  assert.equal(worstTone(["ok", "ok", "ok"]), "ok");
+  assert.equal(worstTone(["ok", "bad", "warn"]), "bad");
+  assert.equal(worstTone(["ok", "warn", "idle"]), "warn");
+  // "모름"을 "정상"으로 보이면 안 되므로 idle이 ok보다 나쁘다.
+  assert.equal(worstTone(["ok", "idle"]), "idle");
+  assert.equal(worstTone([]), "idle");
+});
+
+test("E2E가 깨지면 개요 탭 점도 빨갛다", () => {
+  const html = renderStatusPage({
+    probes: summarizeHealth(
+      [{ ts: minutesAgo(5), id: "main-api", ok: true, status: 401, ms: 90 }],
+      { now: NOW },
+    ),
+    e2e: {
+      ts: minutesAgo(60),
+      total: 3,
+      passed: 2,
+      failed: [{ name: "signup-validation", step: "타임아웃" }],
+    },
+    now: NOW,
+  });
+
+  assert.match(html, /id="tab-overview"[\s\S]{0,200}dot bad/);
+});
+
+test("목록의 시각은 한 줄에 들어가는 짧은 형식이다", () => {
+  const html = renderStatusPage({
+    probes: summarizeHealth(
+      [
+        {
+          ts: "2026-09-09T02:15:00.000Z", // KST 11:15
+          id: "main-api",
+          ok: false,
+          status: 502,
+          ms: 10,
+          note: "상태코드 502",
+        },
+      ],
+      { now: Date.parse("2026-09-09T06:00:00.000Z") },
+    ),
+    now: Date.parse("2026-09-09T06:00:00.000Z"),
+  });
+
+  assert.match(html, /09\.09 11:15/);
+  // "오전/오후"가 붙은 긴 형식은 목록에 들어가지 않는다.
+  assert.doesNotMatch(html, /<span class="event-time">[^<]*오[전후]/);
 });
