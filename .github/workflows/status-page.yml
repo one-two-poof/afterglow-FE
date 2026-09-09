@@ -1,0 +1,61 @@
+# 상태 페이지 빌드·배포.
+#
+# status-data 브랜치의 기록을 정적 HTML 한 장으로 구워 GitHub Pages에 올린다.
+# 페이지는 런타임에 API를 부르지 않으므로 백엔드가 죽어도 페이지 자체는 뜬다.
+#
+# ⚠️ 최초 1회 수동 설정: 저장소 Settings → Pages → Source를 "GitHub Actions"로.
+name: Status page
+
+on:
+  # 헬스체크가 끝날 때마다 다시 굽는다. 헬스체크가 실패해도 돌아야 한다 —
+  # 그 실패를 보여주는 게 이 페이지의 일이므로 conclusion으로 거르지 않는다.
+  workflow_run:
+    workflows: ["Health check"]
+    types: [completed]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/build-status-page.mjs
+      - scripts/health-check.mjs
+      - .github/workflows/status-page.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 기록이 아직 없으면(첫 배포) 실패시키지 않는다 — 빈 자리표시자 페이지가 나간다.
+      - name: 기록 가져오기
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          ref: status-data
+          path: .status-data
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 페이지 빌드
+        run: node scripts/build-status-page.mjs --data .status-data --out site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

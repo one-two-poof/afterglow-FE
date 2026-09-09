@@ -52,10 +52,9 @@ import {
 const BASEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 // buildings.pmtiles: PMTiles v3 / MVT / zoom 0~14 / 단일 레이어 "buildings".
-// ⚠️ 기본 fallback을 두지 않는다. EC2 원본(http://ec2-.../data/buildings.pmtiles)은
-//    Cache-Control: no-store 라 MapLibre Native의 PMTilesFileSource가 SIGSEGV로
-//    죽는다(백엔드 캐시헤더 수정 대기). 유효한 URL이 env로 주어질 때만 건물 레이어를
-//    렌더하고, 없으면 basemap만 띄운다(크래시·404 에러 회피).
+// 단일 파일을 MapLibre Native의 PMTilesFileSource가 HTTP Range로 잘라 읽는다.
+// ⚠️ 기본 fallback을 두지 않는다. 유효한 URL이 env로 주어질 때만 건물 레이어를
+//    렌더하고, 없으면 basemap만 띄운다(404 에러 회피).
 const BUILDINGS_PMTILES_URL = env.buildingsPmtilesUrl;
 const BUILDINGS_SOURCE_LAYER = "buildings";
 
@@ -136,8 +135,9 @@ function CloudIcon({ color }: { color: string }) {
  * 지도 렌더 (RN). 배경지도 + 건물 PMTiles + 마커.
  * markers가 주어지면 그 지점들이 보이도록 카메라를 이동한다.
  *
- * ⚠️ 네이티브 전용(웹은 MapLibreMap.web.tsx). 건물 PMTiles 렌더 크래시(서버 no-store
- *    이슈)는 [[pmtiles-tile-caching]] 참고 — 백엔드 캐시헤더 수정 대기.
+ * ⚠️ 네이티브 전용(웹은 MapLibreMap.web.tsx 플레이스홀더).
+ *    건물 PMTiles는 캐시 가능한 https로 서빙돼야 한다 — no-store로 서빙하면
+ *    PMTilesFileSource가 SIGSEGV로 죽는다(2026-09-04 백엔드에서 해결).
  */
 export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
   function MapLibreMap(

@@ -1,0 +1,72 @@
+# 백엔드 합성 헬스체크.
+#
+# 실사용자 트래픽 없이도 서버 상태를 알기 위해 주기적으로 엔드포인트를 두드리고
+# 결과를 status-data 브랜치에 JSONL로 남긴다. 상태 페이지가 그 기록을 읽어 그린다.
+#
+# 프로브가 하나라도 실패하면 잡을 실패시킨다 — 스케줄 워크플로가 실패하면 GitHub이
+# 저장소 소유자에게 메일을 보내므로, 별도 알림 서비스 없이 이게 1차 경보가 된다.
+name: Health check
+
+on:
+  schedule:
+    # 30분 간격. GitHub 스케줄은 부하에 따라 지연·누락되므로 가용률은 추세로만 읽을 것.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+# 같은 브랜치에 기록을 밀어 넣으므로 두 실행이 겹치면 푸시가 충돌한다.
+concurrency:
+  group: health-check
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # status-data는 코드가 없는 기록 전용 브랜치다. 없으면 이번 푸시로 만들어진다.
+      - name: status-data 브랜치 준비
+        env:
+          REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          mkdir -p .status-data
+          cd .status-data
+          git init -q -b status-data
+          git remote add origin "$REMOTE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch -q --depth 50 origin status-data; then
+            git reset -q --hard FETCH_HEAD
+          else
+            echo "status-data 브랜치가 아직 없다 — 이번 실행이 처음 만든다"
+          fi
+
+      - name: 프로브 실행
+        id: probe
+        continue-on-error: true
+        run: node scripts/health-check.mjs --out .status-data
+
+      # 실패한 실행의 기록도 남겨야 하므로 커밋은 프로브 결과와 무관하게 돈다.
+      - name: 기록 커밋
+        working-directory: .status-data
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "변경 없음"
+            exit 0
+          fi
+          git commit -q -m "chore(status): 헬스체크 $(date -u '+%Y-%m-%dT%H:%MZ')"
+          git push -q origin status-data
+
+      - name: 프로브 실패 시 잡 실패 처리
+        if: steps.probe.outcome == 'failure'
+        run: |
+          echo "::error::헬스체크 프로브가 실패했다. 상태 페이지와 위 로그를 확인할 것."
+          exit 1
