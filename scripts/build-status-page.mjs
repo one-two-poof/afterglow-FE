@@ -19,6 +19,14 @@ import { PROBES } from "./health-check.mjs";
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 const BUCKET_MS = 30 * 60 * 1000;
 /**
+ * 이 시간이 지나도록 새 기록이 없으면 "점검 중단"으로 본다(점검 주기 30분 × 3회 누락).
+ *
+ * 왜 필요한가: 점검이 멈추면 마지막 기록이 성공이었다는 이유로 화면이 계속 "정상"을
+ * 띄운다. 서버가 멀쩡한 것과 감시가 멈춘 것은 전혀 다른 상태인데 구분되지 않는다.
+ * GitHub Actions의 schedule은 부하가 높으면 지연되거나 통째로 누락되므로 실제로 자주 겪는다.
+ */
+export const STALE_AFTER_MS = 90 * 60 * 1000;
+/**
  * 카드 하나에 나열할 실패 개수 상한. 플로우·프로브가 늘어 한꺼번에 여러 개가 깨지면
  * 카드 하나가 페이지를 통째로 밀어낸다 — 전체 목록은 아티팩트의 리포트에 있다.
  */
@@ -83,6 +91,11 @@ export function summarizeHealth(records, { now = Date.now() } = {}) {
       uptime: recent.length === 0 ? null : (okCount / recent.length) * 100,
       medianMs: median(recent.filter((r) => r.ok).map((r) => r.ms)),
       buckets,
+      // 마지막 기록이 너무 오래됐으면 지금 상태를 안다고 할 수 없다.
+      // 기록이 아예 없는 경우(새로 추가한 프로브)는 stale이 아니라 "대기 중"이다 —
+      // 한 번도 돈 적 없는 것과 돌다가 멈춘 것은 다른 사건이다.
+      stale:
+        mine.length > 0 && now - Date.parse(mine.at(-1).ts) > STALE_AFTER_MS,
       failures: recent
         .filter((record) => !record.ok)
         .slice(-MAX_LISTED_FAILURES)
@@ -144,6 +157,8 @@ const relative = (iso, now) => {
 /** 상태 한 단어 + 색 계열. tone은 CSS 클래스와 1:1로 맞춘다. */
 const probeTone = (probe) => {
   if (!probe.latest) return { text: "대기 중", tone: "idle" };
+  // 낡은 기록으로 "정상"을 말하면 안 된다 — 지금 상태는 모르는 것이다.
+  if (probe.stale) return { text: "점검 중단", tone: "warn" };
   return probe.latest.ok
     ? { text: "정상", tone: "ok" }
     : { text: "이상", tone: "bad" };
@@ -229,12 +244,23 @@ function renderOverview({ probes, e2e, sentry, now }) {
     // 실패를 몇 건까지 나열하는지는 페이지 전체에서 한 규칙으로 둔다.
     .slice(0, MAX_LISTED_FAILURES);
 
+  const stale = probes.some((probe) => probe.stale);
+
   const stats = [
     {
       label: "백엔드 가용률",
       value: uptime === null ? "—" : `${uptime.toFixed(1)}%`,
-      sub: `24시간 · 프로브 ${probes.length}종`,
-      tone: down.length > 0 ? "bad" : uptime === null ? "idle" : "ok",
+      sub: stale
+        ? "점검이 멈춰 값이 낡았습니다"
+        : `24시간 · 프로브 ${probes.length}종`,
+      // 점검이 멈춘 동안의 수치를 초록으로 칠하면 "정상"으로 읽힌다.
+      tone: stale
+        ? "idle"
+        : down.length > 0
+          ? "bad"
+          : uptime === null
+            ? "idle"
+            : "ok",
     },
     {
       label: "E2E",
@@ -426,9 +452,23 @@ export function renderStatusPage({
 }) {
   const down = probes.filter((probe) => probe.latest?.ok === false);
   const allOk = down.length === 0;
-  const headline = allOk ? "백엔드 정상" : `이상 ${down.length}건`;
 
-  const backendTone = allOk ? "ok" : "bad";
+  // 점검이 멈췄으면 그것이 지금 가장 중요한 사실이다 — 서버 상태보다 먼저 말한다.
+  const stale = probes.some((probe) => probe.stale);
+  const lastCheck = probes
+    .map((probe) => probe.latest?.ts)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+
+  const headline = stale
+    ? "점검 중단"
+    : allOk
+      ? "백엔드 정상"
+      : `이상 ${down.length}건`;
+  const headlineTone = stale ? "warn" : allOk ? "ok" : "bad";
+
+  const backendTone = stale ? "warn" : allOk ? "ok" : "bad";
   const tones = {
     // 개요는 전체를 대표한다 — 아래 셋 중 가장 나쁜 상태를 그대로 올린다.
     // (백엔드만 보고 초록을 띄우면 E2E가 깨져 있어도 사이드바가 조용하다)
@@ -575,7 +615,12 @@ body {
   display: flex; flex-direction: column; gap: 1px;
 }
 
-.stamp b { color: var(--ink-2); font-weight: 600; }
+.stamp b {
+  color: var(--ink-2);
+  font-weight: 600;
+  font-family: SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ── 본문 ── */
 main { min-width: 0; padding: 28px clamp(16px, 3.5vw, 36px) 72px; }
@@ -641,6 +686,19 @@ main > * { max-width: 1080px; }
   gap: 12px;
   margin: 36px 0 10px;
 }
+
+/* 놓치면 안 되는 한 줄이라 본문 위, 탭 바깥에 둔다. */
+.notice {
+  margin: 0 0 24px;
+  padding: 11px 14px;
+  border: 1px solid #f4b400;   /* warning-500 */
+  border-left-width: 3px;
+  background: #fff8e6;          /* warning-50 */
+  color: #6b4a12;
+  font-size: 13px; line-height: 20px;
+}
+
+.notice b { color: #b7791f; }   /* warning-700 */
 
 .section-head:first-child { margin-top: 0; }
 .section-head .section { margin: 0; }
@@ -778,17 +836,26 @@ ${NAV.map(
     </nav>
 
     <p class="stamp">
-      <b>${escape(KST.format(new Date(now)))}</b>
-      <span>30분마다 자동 점검</span>
+      <span>페이지 갱신 <b>${escape(formatShort(new Date(now).toISOString()))}</b></span>
+      <span>마지막 점검 <b>${lastCheck ? escape(formatShort(lastCheck)) : "없음"}</b></span>
     </p>
   </aside>
 
   <main>
     <div class="topbar">
       <h1 id="page-title">${titles.overview}</h1>
-      <span class="headline"><span class="dot ${allOk ? "ok" : "bad"}"></span>${headline}</span>
+      <span class="headline"><span class="dot ${headlineTone}"></span>${headline}</span>
     </div>
-
+${
+  stale
+    ? `    <p class="notice">
+      <b>자동 점검이 멈춰 있습니다.</b>
+      마지막 점검 ${escape(formatShort(lastCheck))} (${relative(lastCheck, now)}).
+      아래 수치는 모두 그 시점 기준이며, 지금 서버 상태를 뜻하지 않습니다.
+    </p>
+`
+    : ""
+}
 ${NAV.map(
   (
     item,
