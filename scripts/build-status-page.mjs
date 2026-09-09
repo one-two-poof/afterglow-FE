@@ -293,7 +293,7 @@ ${stats
       ${
         events.length === 0
           ? `<p class="empty">최근 24시간 동안 기록된 실패가 없습니다.</p>`
-          : `<table class="grid">
+          : `<div class="card"><table class="grid">
         <thead>
           <tr><th class="col-time">시각</th><th class="col-key">대상</th><th>내용</th></tr>
         </thead>
@@ -308,13 +308,13 @@ ${events
   )
   .join("\n")}
         </tbody>
-      </table>`
+      </table></div>`
       }`;
 }
 
 function renderBackend(probes, now) {
   return `
-      <table class="grid">
+      <div class="card"><table class="grid">
         <thead>
           <tr>
             <th>서비스</th>
@@ -354,19 +354,19 @@ ${probes
   })
   .join("\n")}
         </tbody>
-      </table>`;
+      </table></div>`;
 }
 
 function renderE2E(e2e, now) {
   if (!e2e) {
     return `
-      <p class="empty">E2E 워크플로가 아직 결과를 남기지 않았습니다. Actions에서 한 번 실행하면 채워집니다.</p>`;
+      <div class="card"><p class="empty">E2E 워크플로가 아직 결과를 남기지 않았습니다. Actions에서 한 번 실행하면 채워집니다.</p></div>`;
   }
 
   const failed = e2e.failed ?? [];
   const state = e2eTone(e2e);
   return `
-      <table class="grid">
+      <div class="card"><table class="grid">
         <thead>
           <tr>
             <th>플로우</th>
@@ -391,19 +391,19 @@ function renderE2E(e2e, now) {
             5,
           )}
         </tbody>
-      </table>`;
+      </table></div>`;
 }
 
 function renderSentry(sentry, now) {
   if (!sentry) {
     return `
-      <p class="empty">DSN과 수집 Secrets가 설정되면 24시간 이벤트 수가 표시됩니다.</p>`;
+      <div class="card"><p class="empty">DSN과 수집 Secrets가 설정되면 24시간 이벤트 수가 표시됩니다.</p></div>`;
   }
 
   const state = sentryTone(sentry);
   const issues = sentry.issues ?? [];
   return `
-      <table class="grid">
+      <div class="card"><table class="grid">
         <thead>
           <tr>
             <th>수집</th>
@@ -428,7 +428,7 @@ function renderSentry(sentry, now) {
             5,
           )}
         </tbody>
-      </table>`;
+      </table></div>`;
 }
 
 /** 사이드바 항목. 각 탭 옆의 점이 그 영역의 상태를 그대로 말한다. */
@@ -514,7 +514,14 @@ export function renderStatusPage({
 <title>Afterglow 상태</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-/* 색은 packages/tokens/src/index.ts 의 시맨틱 토큰을 그대로 옮겼다. 라이트 전용. */
+/*
+ * 색은 packages/tokens/src/index.ts 의 시맨틱 토큰을 그대로 옮겼다. 라이트 전용.
+ *
+ * 색 사용 규칙:
+ * - 화면의 색 축은 primary(파랑). 선택된 탭, 알림 줄, 링크 등 UI 요소가 쓴다.
+ * - 초록/빨강은 성공·실패 값에만 쓴다(가용률, 통과 수, 실패 시각·건수, 상태 단어).
+ *   그 밖의 요소가 초록·빨강을 쓰면 정작 봐야 할 수치가 묻힌다.
+ */
 :root {
   --paper: #ffffff;        /* surface */
   --wash: #f7f8f8;         /* bg */
@@ -524,12 +531,13 @@ export function renderStatusPage({
   --ink: #171c21;          /* text */
   --ink-2: #3f4b58;        /* text-secondary */
   --ink-3: #8894a6;        /* text-muted */
-  --accent: #0787d0;       /* primary-600 */
-  --accent-deep: #00689a;  /* primary-700 */
-  --ok: #1f9d55;           /* success-700 */
-  --warn: #b7791f;         /* warning-700 */
-  --bad: #c62828;          /* error-700 */
-  --idle: #b8c4d0;         /* neutral-400 */
+  --primary: #0787d0;      /* primary-600 */
+  --primary-deep: #00689a; /* primary-700 */
+  --primary-wash: #f0faff; /* primary-50 / surface-accent */
+  --primary-edge: #b6e8ff; /* primary-200 / border-accent */
+  --ok: #1f9d55;           /* success-700 — 성공 수치 전용 */
+  --bad: #c62828;          /* error-700 — 실패 수치 전용 */
+  --shadow: 0 1px 2px rgba(23, 28, 33, 0.05);
 }
 
 * { box-sizing: border-box; }
@@ -547,15 +555,14 @@ body {
   word-break: keep-all;
 }
 
-/* 고정폭은 숫자에만. 헤더의 한글까지 고정폭이면 어색하게 벌어진다. */
 .mono {
   font-family: SFMono-Regular, Menlo, monospace;   /* fontFamily.mono */
   font-variant-numeric: tabular-nums;
 }
 
-.app { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+.app { display: grid; grid-template-columns: 216px 1fr; min-height: 100vh; }
 
-/* ── 사이드바: 채우지 않고 세로 괘선 하나로만 나눈다 ── */
+/* ── 사이드바 ── */
 .sidebar {
   position: sticky;
   top: 0;
@@ -563,53 +570,55 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  padding: 28px 20px;
+  gap: 26px;
+  padding: 26px 16px;
   border-right: 1px solid var(--rule);
 }
 
-.brand { display: flex; flex-direction: column; gap: 1px; }
+.brand { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
 .brand b { font-size: 15px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; }
 .brand span {
   font-size: 10px; line-height: 14px; font-weight: 500;   /* overline */
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
 }
 
-.nav { display: flex; flex-direction: column; }
+.nav { display: flex; flex-direction: column; gap: 2px; }
 
 .nav button {
   display: flex;
   align-items: center;
   gap: 9px;
   width: 100%;
-  padding: 7px 0;
+  padding: 8px;
   border: 0;
-  border-bottom: 1px solid var(--rule);
+  border-radius: 8px;
   background: none;
   color: var(--ink-2);
   font: inherit;
   font-size: 14px; line-height: 20px;
   text-align: left;
   cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
-.nav button:first-child { border-top: 1px solid var(--rule); }
-.nav button:hover { color: var(--ink); }
+.nav button:hover { background: var(--wash-2); color: var(--ink); }
 
+/* 선택 상태는 primary로. 상태색(초록·빨강)은 수치 몫이라 여기 쓰지 않는다. */
 .nav button[aria-selected="true"] {
-  color: var(--ink);
+  background: var(--primary-wash);
+  color: var(--primary-deep);
   font-weight: 600;   /* label-md */
 }
 
-.nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.nav button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 
-.dot { width: 6px; height: 6px; border-radius: 50%; flex: none; background: var(--idle); }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--rule-strong); }
 .dot.ok { background: var(--ok); }
-.dot.warn { background: var(--warn); }
 .dot.bad { background: var(--bad); }
 
 .stamp {
   margin-top: auto;
+  padding: 0 8px;
   font-size: 12px; line-height: 18px;
   color: var(--ink-3);
   display: flex; flex-direction: column; gap: 1px;
@@ -623,7 +632,7 @@ body {
 }
 
 /* ── 본문 ── */
-main { min-width: 0; padding: 28px clamp(16px, 3.5vw, 36px) 72px; }
+main { min-width: 0; padding: 26px clamp(16px, 3.5vw, 36px) 72px; background: var(--wash); }
 main > * { max-width: 1080px; }
 
 .topbar {
@@ -632,9 +641,7 @@ main > * { max-width: 1080px; }
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  padding-bottom: 14px;
-  margin-bottom: 28px;
-  border-bottom: 2px solid var(--ink);
+  margin-bottom: 22px;
 }
 
 .topbar h1 {
@@ -645,63 +652,67 @@ main > * { max-width: 1080px; }
 
 .headline { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
 
-/* ── 요약: 카드가 아니라 괘선으로 나눈 한 줄 ── */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
-  margin-bottom: 36px;
+/* 알림은 경보가 아니라 안내다 — 색 축인 primary를 쓴다. */
+.notice {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--primary-edge);
+  border-radius: 10px;
+  background: var(--primary-wash);
+  color: var(--ink-2);
+  font-size: 13px; line-height: 20px;
+  box-shadow: var(--shadow);
 }
 
-.stat { padding: 16px 20px 16px 0; }
-.stat + .stat { border-left: 1px solid var(--rule); padding-left: 20px; }
+.notice b { color: var(--primary-deep); }
+
+/* ── 카드 ── */
+.card {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 6px 18px;
+  overflow-x: auto;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.stat {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+  min-width: 0;
+}
 
 .stat-label {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-size: 10px; line-height: 14px; font-weight: 500;   /* overline */
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
 }
 
+/* 성공·실패 값에만 초록·빨강을 쓴다. 그 외 상태는 회색으로 둔다. */
 .stat-value {
   margin: 0;
   font-family: SFMono-Regular, Menlo, monospace;
-  font-size: 28px; line-height: 36px; font-weight: 600;
+  font-size: 30px; line-height: 38px; font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  color: var(--ink);
 }
 
 .stat-value.ok { color: var(--ok); }
 .stat-value.bad { color: var(--bad); }
-.stat-value.warn { color: var(--warn); }
-.stat-value.idle { color: var(--ink-3); }
+.stat-value.warn, .stat-value.idle { color: var(--ink-3); }
 
-.stat-sub { margin: 2px 0 0; font-size: 12px; line-height: 16px; color: var(--ink-3); }
-
-/* 상세 탭의 구역 머리 — 제목 왼쪽, 그 구역의 상태 오른쪽. */
-.section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 36px 0 10px;
-}
-
-/* 놓치면 안 되는 한 줄이라 본문 위, 탭 바깥에 둔다. */
-.notice {
-  margin: 0 0 24px;
-  padding: 11px 14px;
-  border: 1px solid #f4b400;   /* warning-500 */
-  border-left-width: 3px;
-  background: #fff8e6;          /* warning-50 */
-  color: #6b4a12;
-  font-size: 13px; line-height: 20px;
-}
-
-.notice b { color: #b7791f; }   /* warning-700 */
-
-.section-head:first-child { margin-top: 0; }
-.section-head .section { margin: 0; }
+.stat-sub { margin: 4px 0 0; font-size: 12px; line-height: 16px; color: var(--ink-3); }
 
 .section {
   margin: 0 0 10px;
@@ -709,13 +720,24 @@ main > * { max-width: 1080px; }
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
 }
 
-/* ── 표: 콘솔처럼 촘촘하게, 괘선만으로 ── */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 30px 0 10px;
+}
+
+.section-head:first-child { margin-top: 0; }
+.section-head .section { margin: 0; }
+
+/* ── 표: 카드 안에서 촘촘하게 ── */
 .grid { width: 100%; border-collapse: collapse; }
 
 .grid th {
   text-align: left;
-  padding: 0 12px 7px 0;
-  border-bottom: 1px solid var(--rule-strong);
+  padding: 12px 12px 8px 0;
+  border-bottom: 1px solid var(--rule);
   font-size: 11px; line-height: 16px; font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--ink-3);
@@ -723,44 +745,40 @@ main > * { max-width: 1080px; }
 }
 
 .grid td {
-  padding: 10px 12px 10px 0;
+  padding: 11px 12px 11px 0;
   border-bottom: 1px solid var(--rule);
   vertical-align: baseline;
   color: var(--ink-2);
 }
 
+.grid tr:last-child td { border-bottom: 0; }
 .grid th:last-child, .grid td:last-child { padding-right: 0; }
 .grid .right { text-align: right; }
 .grid .strong { color: var(--ink); font-weight: 600; }
 .grid .muted { color: var(--ink-3); }
-/* "09.09 18:15"이 한 줄에 들어가는 폭. 모자라면 두 줄로 깨져 정렬이 무너진다. */
 .grid .col-time { width: 112px; }
-.event-time, .fail-key { white-space: nowrap; }
 .grid .col-key { width: 148px; }
 
 /* 상태 띠와 실패 목록은 같은 행에 딸린 정보라 위 경계선을 지운다. */
 .grid .bar-row td { border-bottom: 0; padding: 0 0 10px; }
-.grid .fail-row td { padding: 0 0 12px; }
+.grid .fail-row td { padding: 0 0 14px; }
 
 .state { font-size: 12px; line-height: 18px; font-weight: 600; color: var(--ink-3); }
 .state.ok { color: var(--ok); }
-.state.warn { color: var(--warn); }
 .state.bad { color: var(--bad); }
 
 /*
- * 가동 띠는 "문제가 어디 있었나"를 보여주는 장치다. 정상 구간을 색으로 칠하면
- * 화면에서 가장 큰 요소가 아무 정보도 없는 초록/파랑 띠가 된다. 정상은 조용한
- * 회색으로 두고 실패에만 색을 준다 — 눈이 바로 빨간 칸으로 간다.
+ * 가동 띠: 정상 구간을 색으로 칠하면 화면에서 가장 큰 요소가 아무 정보도 없는 띠가
+ * 되고 정작 빨간 실패 칸이 묻힌다. 정상은 회색, 실패에만 색.
  */
 .bars { display: flex; gap: 1px; height: 14px; align-items: stretch; }
-.bars i { flex: 1; background: var(--wash-2); }      /* 기록 없음 */
-.bars i.ok { background: var(--rule-strong); }        /* 정상 */
-.bars i.bad { background: var(--bad); }               /* 실패 */
+.bars i { flex: 1; background: var(--wash-2); }   /* 기록 없음 */
+.bars i.ok { background: var(--rule-strong); }
+.bars i.bad { background: var(--bad); }
 
 /*
  * 목록 전체를 하나의 그리드로 둔다(li는 display:contents). 각 li를 개별 그리드로
- * 만들면 행마다 열이 따로 놀아서, 키가 고정폭을 넘는 순간(예: 플로우 이름) 설명과
- * 붙어버린다. max-content로 두면 가장 긴 키에 맞춰 모든 행이 정렬된다.
+ * 만들면 행마다 열이 따로 놀아서, 키가 고정폭을 넘는 순간 설명과 붙어버린다.
  */
 .fails {
   margin: 0;
@@ -775,7 +793,7 @@ main > * { max-width: 1080px; }
 }
 
 .fails li { display: contents; }
-.fails .fail-more { grid-column: 1 / -1; }
+.fails .fail-more { grid-column: 1 / -1; color: var(--ink-3); font-size: 12px; }
 
 .fail-key {
   font-family: SFMono-Regular, Menlo, monospace;
@@ -783,9 +801,8 @@ main > * { max-width: 1080px; }
 }
 
 .fail-note { color: var(--ink-2); overflow-wrap: anywhere; }
-.fails .fail-more { color: var(--ink-3); font-size: 12px; }
 
-.empty { margin: 0; padding: 4px 0; color: var(--ink-3); font-size: 13px; }
+.empty { margin: 0; padding: 14px 0; color: var(--ink-3); font-size: 13px; }
 
 [hidden] { display: none !important; }
 
@@ -793,22 +810,21 @@ main > * { max-width: 1080px; }
   .app { grid-template-columns: 1fr; }
   .sidebar {
     position: static; height: auto;
-    flex-direction: row; align-items: center; gap: 16px;
+    flex-direction: row; align-items: center; gap: 12px;
     padding: 12px 16px;
     border-right: 0; border-bottom: 1px solid var(--rule);
     overflow-x: auto;
   }
   .brand, .stamp { display: none; }
-  .nav { flex-direction: row; gap: 16px; }
-  .nav button { border: 0; white-space: nowrap; width: auto; padding: 4px 0; }
-  .nav button:first-child { border-top: 0; }
-  main { padding-top: 20px; }
+  .nav { flex-direction: row; gap: 4px; }
+  .nav button { white-space: nowrap; width: auto; padding: 6px 10px; }
   .stats { grid-template-columns: 1fr; }
-  .stat + .stat { border-left: 0; border-top: 1px solid var(--rule); padding-left: 0; }
+  .card { padding: 6px 14px; }
   .grid, .grid thead, .grid tbody, .grid tr, .grid td { display: block; }
   .grid thead { display: none; }
   .grid td { border-bottom: 0; padding: 2px 0; }
   .grid tr { border-bottom: 1px solid var(--rule); padding: 10px 0; }
+  .grid tr:last-child { border-bottom: 0; }
   .grid .right { text-align: left; }
   .fails { grid-template-columns: 1fr; row-gap: 2px; }
   .fails li { display: block; }
