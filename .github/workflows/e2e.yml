@@ -112,7 +112,12 @@ jobs:
           # 뜨면 플로우가 통째로 막히므로 미리 허용해 둔다.
           xcrun simctl privacy "$UDID" grant location com.dunaduneos.afterglow || true
 
+      # 버전을 고정한다. 설치 스크립트는 기본으로 최신을 받는데, 그러면 Maestro가
+      # 새 버전을 낼 때마다 아무 커밋 없이 야간 E2E 결과가 바뀔 수 있다.
+      # 2.10.0은 로컬에서 이 플로우들이 통과하는 걸 확인한 버전이다.
       - name: Maestro 설치
+        env:
+          MAESTRO_VERSION: 2.10.0
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
@@ -122,16 +127,41 @@ jobs:
         continue-on-error: true
         env:
           MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED: "true"
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
+          # CI 시뮬레이터는 첫 부팅에 데이터 마이그레이션만 1분 넘게 걸리고, 그 뒤
+          # XCUITest 러너 설치가 이어진다. 120초로는 부족해 IOSDriverTimeoutException이
+          # 났다. 넉넉히 준다 — 정상일 때는 어차피 기다리지 않는다.
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "300000"
+          UDID: ${{ steps.simulator.outputs.udid }}
         run: |
           # --device는 test 서브커맨드 옵션이고(전역 옵션 아님), --format 값은 대문자
           # 열거형이다(JUNIT/HTML/HTML-DETAILED/NOOP). maestro 2.10 기준.
           # --flatten-debug-output: 실행마다 타임스탬프 하위 폴더를 만들지 않아 아티팩트
           # 경로가 고정된다.
-          maestro test --device "${{ steps.simulator.outputs.udid }}" apps/mobile/.maestro \
-            --exclude-tags=subflow \
-            --format JUNIT --output report.xml \
-            --debug-output maestro-artifacts --flatten-debug-output
+          run_maestro() {
+            maestro test --device "$UDID" apps/mobile/.maestro \
+              --exclude-tags=subflow \
+              --format JUNIT --output report.xml \
+              --debug-output maestro-artifacts --flatten-debug-output \
+              2>&1 | tee maestro-output.txt
+            return "${PIPESTATUS[0]}"
+          }
+
+          if run_maestro; then
+            exit 0
+          fi
+
+          # 드라이버가 못 뜬 것과 플로우가 깨진 것은 다른 사건이다. 전자만 재시도한다
+          # — 실제 실패를 재시도하면 실행 시간만 두 배가 되고 결과는 그대로다.
+          if ! grep -q "iOS driver not ready" maestro-output.txt; then
+            echo "플로우가 실패했다(드라이버 문제 아님) — 재시도하지 않는다"
+            exit 1
+          fi
+
+          echo "::warning::XCUITest 드라이버 기동 실패 — 시뮬레이터를 다시 띄우고 1회 재시도"
+          xcrun simctl shutdown all || true
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          run_maestro
 
       # 실패한 실행일수록 스크린샷이 필요하다 — 결과와 무관하게 올린다.
       - name: 실행 아티팩트 업로드
@@ -142,6 +172,7 @@ jobs:
           path: |
             maestro-artifacts
             report.xml
+            maestro-output.txt
           retention-days: 14
 
       - name: status-data 준비
