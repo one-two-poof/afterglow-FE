@@ -334,7 +334,7 @@ ${probes
 function renderE2E(e2e, now) {
   if (!e2e) {
     return `
-      <p class="empty">E2E 워크플로가 아직 결과를 남기지 않았습니다. Actions에서 한 번 실행하면 채워집니다. <span class="state idle">준비 중</span></p>`;
+      <p class="empty">E2E 워크플로가 아직 결과를 남기지 않았습니다. Actions에서 한 번 실행하면 채워집니다.</p>`;
   }
 
   const failed = e2e.failed ?? [];
@@ -371,7 +371,7 @@ function renderE2E(e2e, now) {
 function renderSentry(sentry, now) {
   if (!sentry) {
     return `
-      <p class="empty">DSN과 수집 Secrets가 설정되면 24시간 이벤트 수가 표시됩니다. <span class="state idle">준비 중</span></p>`;
+      <p class="empty">DSN과 수집 Secrets가 설정되면 24시간 이벤트 수가 표시됩니다.</p>`;
   }
 
   const state = sentryTone(sentry);
@@ -408,10 +408,15 @@ function renderSentry(sentry, now) {
 /** 사이드바 항목. 각 탭 옆의 점이 그 영역의 상태를 그대로 말한다. */
 const NAV = [
   { id: "overview", label: "개요" },
-  { id: "backend", label: "백엔드" },
-  { id: "e2e", label: "E2E" },
-  { id: "errors", label: "앱 에러" },
+  { id: "detail", label: "상세" },
 ];
+
+/** 상세 탭 안의 구역. 셋을 한 탭에 쌓되 각자 제목과 상태를 유지한다. */
+const renderSection = (label, state, body) => `
+      <div class="section-head">
+        <h2 class="section">${label}</h2>
+        <span class="state ${state.tone}">${state.text}</span>
+      </div>${body}`;
 
 export function renderStatusPage({
   probes,
@@ -432,23 +437,30 @@ export function renderStatusPage({
       e2eTone(e2e).tone,
       sentryTone(sentry).tone,
     ]),
-    backend: backendTone,
-    e2e: e2eTone(e2e).tone,
-    errors: sentryTone(sentry).tone,
+    // 상세는 세 구역을 함께 담으므로 그중 가장 나쁜 상태를 대표한다.
+    detail: worstTone([
+      backendTone,
+      e2eTone(e2e).tone,
+      sentryTone(sentry).tone,
+    ]),
   };
 
   const panels = {
     overview: renderOverview({ probes, e2e, sentry, now }),
-    backend: renderBackend(probes, now),
-    e2e: renderE2E(e2e, now),
-    errors: renderSentry(sentry, now),
+    detail: [
+      renderSection(
+        "백엔드",
+        { text: allOk ? "정상" : `이상 ${down.length}건`, tone: backendTone },
+        renderBackend(probes, now),
+      ),
+      renderSection("E2E", e2eTone(e2e), renderE2E(e2e, now)),
+      renderSection("앱 에러", sentryTone(sentry), renderSentry(sentry, now)),
+    ].join("\n"),
   };
 
   const titles = {
     overview: "개요",
-    backend: "백엔드",
-    e2e: "E2E",
-    errors: "앱 에러",
+    detail: "상세",
   };
 
   return `<!doctype html>
@@ -621,6 +633,18 @@ main > * { max-width: 1080px; }
 
 .stat-sub { margin: 2px 0 0; font-size: 12px; line-height: 16px; color: var(--ink-3); }
 
+/* 상세 탭의 구역 머리 — 제목 왼쪽, 그 구역의 상태 오른쪽. */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 36px 0 10px;
+}
+
+.section-head:first-child { margin-top: 0; }
+.section-head .section { margin: 0; }
+
 .section {
   margin: 0 0 10px;
   font-size: 10px; line-height: 14px; font-weight: 500;   /* overline */
@@ -675,15 +699,25 @@ main > * { max-width: 1080px; }
 .bars i.ok { background: var(--rule-strong); }        /* 정상 */
 .bars i.bad { background: var(--bad); }               /* 실패 */
 
-.fails { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
-
-.fails li {
+/*
+ * 목록 전체를 하나의 그리드로 둔다(li는 display:contents). 각 li를 개별 그리드로
+ * 만들면 행마다 열이 따로 놀아서, 키가 고정폭을 넘는 순간(예: 플로우 이름) 설명과
+ * 붙어버린다. max-content로 두면 가장 긴 키에 맞춰 모든 행이 정렬된다.
+ */
+.fails {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   display: grid;
-  grid-template-columns: 112px 1fr;
-  gap: 12px;
+  grid-template-columns: max-content 1fr;
+  column-gap: 14px;
+  row-gap: 5px;
   align-items: baseline;
   font-size: 13px;
 }
+
+.fails li { display: contents; }
+.fails .fail-more { grid-column: 1 / -1; }
 
 .fail-key {
   font-family: SFMono-Regular, Menlo, monospace;
@@ -691,7 +725,7 @@ main > * { max-width: 1080px; }
 }
 
 .fail-note { color: var(--ink-2); overflow-wrap: anywhere; }
-.fails .fail-more { display: block; color: var(--ink-3); font-size: 12px; }
+.fails .fail-more { color: var(--ink-3); font-size: 12px; }
 
 .empty { margin: 0; padding: 4px 0; color: var(--ink-3); font-size: 13px; }
 
@@ -718,7 +752,8 @@ main > * { max-width: 1080px; }
   .grid td { border-bottom: 0; padding: 2px 0; }
   .grid tr { border-bottom: 1px solid var(--rule); padding: 10px 0; }
   .grid .right { text-align: left; }
-  .fails li { grid-template-columns: 1fr; gap: 1px; }
+  .fails { grid-template-columns: 1fr; row-gap: 2px; }
+  .fails li { display: block; }
 }
 </style>
 </head>
