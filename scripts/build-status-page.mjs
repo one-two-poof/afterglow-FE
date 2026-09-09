@@ -104,11 +104,12 @@ const KST = new Intl.DateTimeFormat("ko-KR", {
   timeStyle: "short",
 });
 
-const formatTime = (iso) => (iso ? KST.format(new Date(iso)) : "기록 없음");
-
 /**
  * 표에 들어갈 짧은 시각(09.09 18:15). 한국어 "오전/오후"가 붙은 긴 형식은
  * 좁은 열에서 두 줄로 깨진다 — 목록은 정렬이 읽기를 좌우하므로 폭을 고정한다.
+ *
+ * 로케일 출력을 문자열 치환으로 다듬으면 구분자까지 뭉개지므로("09. 09. 18:15"
+ * → "09.09.18:15") 파트로 받아 직접 조립한다.
  */
 const KST_SHORT = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -119,8 +120,6 @@ const KST_SHORT = new Intl.DateTimeFormat("ko-KR", {
   hourCycle: "h23",
 });
 
-// 로케일 출력을 문자열 치환으로 다듬으면 구분자까지 뭉개진다("09. 09. 18:15" →
-// "09.09.18:15"). 파트로 받아 직접 조립한다.
 const formatShort = (iso) => {
   if (!iso) return "—";
   const parts = Object.fromEntries(
@@ -164,36 +163,43 @@ const sentryTone = (sentry) => {
     : { text: "없음", tone: "ok" };
 };
 
-/** 24시간 30분 단위 상태 막대. 값이 없는 구간은 옅게 남겨 공백을 드러낸다. */
-const renderBars = (buckets) => `
-        <div class="bars" role="img" aria-label="최근 24시간 30분 단위 상태">
-          ${buckets.map((bucket) => `<i class="${bucket}"></i>`).join("")}
-        </div>`;
+/**
+ * 여러 상태 중 가장 나쁜 것을 고른다. 나쁜 소식이 좋은 소식에 가려지면 안 된다.
+ * idle(데이터 없음)은 ok보다 나쁘게 본다 — "모름"을 "정상"으로 보이면 안 되므로.
+ */
+export function worstTone(tones) {
+  const order = ["bad", "warn", "idle", "ok"];
+  return order.find((tone) => tones.includes(tone)) ?? "idle";
+}
 
-const renderFailureList = (items) =>
+/** 24시간 30분 단위 상태 띠. 값이 없는 구간은 옅게 남겨 공백을 드러낸다. */
+const renderBars = (buckets) => `
+            <div class="bars" role="img" aria-label="최근 24시간 30분 단위 상태">
+              ${buckets.map((bucket) => `<i class="${bucket}"></i>`).join("")}
+            </div>`;
+
+/** 표 안에 접어 넣는 실패 목록. 상한을 넘으면 남은 건수만 알린다. */
+const renderFailureRows = (items, columns) =>
   items.length === 0
     ? ""
-    : `<ul class="fails">${items
-        .slice(0, MAX_LISTED_FAILURES)
-        .map(
-          (item) =>
-            `<li><span class="fail-key">${escape(item.key)}</span><span class="fail-note">${escape(item.note)}</span></li>`,
-        )
-        .join("")}${
-        items.length > MAX_LISTED_FAILURES
-          ? `<li class="fail-more">외 ${items.length - MAX_LISTED_FAILURES}건 — 아티팩트의 리포트 참고</li>`
-          : ""
-      }</ul>`;
-
-/** 개요 탭의 요약 타일. 숫자 하나와 상태만 크게 보여준다. */
-function renderSummaryTile({ label, value, unit = "", sub, tone }) {
-  return `
-        <article class="tile ${tone}">
-          <p class="tile-label">${escape(label)}</p>
-          <p class="tile-value">${escape(value)}<span class="tile-unit">${escape(unit)}</span></p>
-          <p class="tile-sub">${escape(sub)}</p>
-        </article>`;
-}
+    : `
+          <tr class="fail-row">
+            <td colspan="${columns}">
+              <ul class="fails">
+                ${items
+                  .slice(0, MAX_LISTED_FAILURES)
+                  .map(
+                    (item) =>
+                      `<li><span class="fail-key">${escape(item.key)}</span><span class="fail-note">${escape(item.note)}</span></li>`,
+                  )
+                  .join("\n                ")}${
+                  items.length > MAX_LISTED_FAILURES
+                    ? `\n                <li class="fail-more">외 ${items.length - MAX_LISTED_FAILURES}건 — 아티팩트의 리포트 참고</li>`
+                    : ""
+                }
+              </ul>
+            </td>
+          </tr>`;
 
 function renderOverview({ probes, e2e, sentry, now }) {
   const withData = probes.filter((probe) => probe.uptime !== null);
@@ -223,185 +229,180 @@ function renderOverview({ probes, e2e, sentry, now }) {
     // 실패를 몇 건까지 나열하는지는 페이지 전체에서 한 규칙으로 둔다.
     .slice(0, MAX_LISTED_FAILURES);
 
+  const stats = [
+    {
+      label: "백엔드 가용률",
+      value: uptime === null ? "—" : `${uptime.toFixed(1)}%`,
+      sub: `24시간 · 프로브 ${probes.length}종`,
+      tone: down.length > 0 ? "bad" : uptime === null ? "idle" : "ok",
+    },
+    {
+      label: "E2E",
+      value: e2e ? `${e2e.passed}/${e2e.total}` : "—",
+      sub: e2e ? `${relative(e2e.ts, now)} 실행` : "Maestro CI 연결 전",
+      tone: e2eTone(e2e).tone,
+    },
+    {
+      label: "앱 에러",
+      value: sentry ? String(sentry.count24h) : "—",
+      sub: sentry ? `24시간 · ${relative(sentry.ts, now)}` : "Sentry 연결 전",
+      tone: sentryTone(sentry).tone,
+    },
+  ];
+
   return `
-      <div class="tiles">
-${renderSummaryTile({
-  label: "백엔드 가용률",
-  value: uptime === null ? "—" : uptime.toFixed(1),
-  unit: uptime === null ? "" : "%",
-  sub: `24시간 · 프로브 ${probes.length}종`,
-  tone: down.length > 0 ? "bad" : uptime === null ? "idle" : "ok",
-})}
-${renderSummaryTile({
-  label: "E2E",
-  value: e2e ? `${e2e.passed}/${e2e.total}` : "—",
-  sub: e2e ? `${relative(e2e.ts, now)} 실행` : "Maestro CI 연결 전",
-  tone: e2eTone(e2e).tone,
-})}
-${renderSummaryTile({
-  label: "앱 에러",
-  value: sentry ? String(sentry.count24h) : "—",
-  sub: sentry ? `24시간 · ${relative(sentry.ts, now)}` : "Sentry 연결 전",
-  tone: sentryTone(sentry).tone,
-})}
+      <div class="stats">
+${stats
+  .map(
+    (stat) => `        <div class="stat">
+          <p class="stat-label">${escape(stat.label)}</p>
+          <p class="stat-value ${stat.tone}">${escape(stat.value)}</p>
+          <p class="stat-sub">${escape(stat.sub)}</p>
+        </div>`,
+  )
+  .join("\n")}
       </div>
 
-      <section class="block">
-        <h2 class="block-title">최근 이벤트</h2>
-        ${
-          events.length === 0
-            ? `<p class="empty">최근 24시간 동안 기록된 실패가 없습니다.</p>`
-            : `<ul class="events">${events
-                .map(
-                  (event) => `
-            <li>
-              <span class="event-time">${escape(formatShort(event.ts))}</span>
-              <span class="event-key">${escape(event.key)}</span>
-              <span class="event-note">${escape(event.note)}</span>
-            </li>`,
-                )
-                .join("")}</ul>`
-        }
-      </section>`;
+      <h2 class="section">최근 이벤트</h2>
+      ${
+        events.length === 0
+          ? `<p class="empty">최근 24시간 동안 기록된 실패가 없습니다.</p>`
+          : `<table class="grid">
+        <thead>
+          <tr><th class="col-time">시각</th><th class="col-key">대상</th><th>내용</th></tr>
+        </thead>
+        <tbody>
+${events
+  .map(
+    (event) => `          <tr>
+            <td class="mono muted"><span class="event-time">${escape(formatShort(event.ts))}</span></td>
+            <td class="strong">${escape(event.key)}</td>
+            <td>${escape(event.note)}</td>
+          </tr>`,
+  )
+  .join("\n")}
+        </tbody>
+      </table>`
+      }`;
 }
 
 function renderBackend(probes, now) {
   return `
-      <div class="rows">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>서비스</th>
+            <th class="right">24시간 가용률</th>
+            <th class="right">중간 응답</th>
+            <th class="right">표본</th>
+            <th class="right">마지막 응답</th>
+            <th class="right">상태</th>
+          </tr>
+        </thead>
+        <tbody>
 ${probes
   .map((probe) => {
     const state = probeTone(probe);
-    const uptime = probe.uptime === null ? "—" : `${probe.uptime.toFixed(1)}%`;
-    const latency = probe.medianMs === null ? "—" : `${probe.medianMs}ms`;
-    return `
-        <article class="row">
-          <div class="row-head">
-            <div>
-              <h3 class="row-title">${escape(probe.label)}</h3>
-              <code class="row-url">${escape(probe.url.replace(/^https?:\/\//, ""))}</code>
-            </div>
-            <span class="badge ${state.tone}">${state.text}</span>
-          </div>
-${renderBars(probe.buckets)}
-          <dl class="metrics">
-            <div><dt>24시간 가용률</dt><dd>${uptime}</dd></div>
-            <div><dt>중간 응답</dt><dd>${latency}</dd></div>
-            <div><dt>표본</dt><dd>${probe.samples}건</dd></div>
-            <div><dt>마지막 응답</dt><dd>${
+    return `          <tr>
+            <td class="strong">${escape(probe.label)}</td>
+            <td class="right mono">${probe.uptime === null ? "—" : `${probe.uptime.toFixed(1)}%`}</td>
+            <td class="right mono">${probe.medianMs === null ? "—" : `${probe.medianMs}ms`}</td>
+            <td class="right mono muted">${probe.samples}</td>
+            <td class="right mono muted">${
               probe.latest
                 ? `${probe.latest.status} · ${relative(probe.latest.ts, now)}`
                 : "—"
-            }</dd></div>
-          </dl>
-          ${renderFailureList(
+            }</td>
+            <td class="right"><span class="state ${state.tone}">${state.text}</span></td>
+          </tr>
+          <tr class="bar-row">
+            <td colspan="6">${renderBars(probe.buckets)}
+            </td>
+          </tr>${renderFailureRows(
             probe.failures.map((failure) => ({
               key: formatShort(failure.ts),
               note: failure.note || `상태코드 ${failure.status}`,
             })),
-          )}
-        </article>`;
+            6,
+          )}`;
   })
-  .join("")}
-      </div>`;
+  .join("\n")}
+        </tbody>
+      </table>`;
 }
 
 function renderE2E(e2e, now) {
   if (!e2e) {
     return `
-      <div class="rows">
-        <article class="row idle">
-          <div class="row-head">
-            <div>
-              <h3 class="row-title">Maestro</h3>
-              <code class="row-url">.maestro/*.yaml</code>
-            </div>
-            <span class="badge idle">준비 중</span>
-          </div>
-          <p class="empty">E2E 워크플로가 아직 결과를 남기지 않았습니다. Actions에서 한 번 실행하면 채워집니다.</p>
-        </article>
-      </div>`;
+      <p class="empty">E2E 워크플로가 아직 결과를 남기지 않았습니다. Actions에서 한 번 실행하면 채워집니다. <span class="state idle">준비 중</span></p>`;
   }
 
   const failed = e2e.failed ?? [];
   const state = e2eTone(e2e);
   return `
-      <div class="rows">
-        <article class="row">
-          <div class="row-head">
-            <div>
-              <h3 class="row-title">Maestro</h3>
-              <code class="row-url">.maestro/*.yaml</code>
-            </div>
-            <span class="badge ${state.tone}">${state.text}</span>
-          </div>
-          <dl class="metrics">
-            <div><dt>통과</dt><dd>${e2e.passed}/${e2e.total}</dd></div>
-            <div><dt>실패</dt><dd>${failed.length}건</dd></div>
-            <div><dt>실행 시각</dt><dd>${escape(formatTime(e2e.ts))}</dd></div>
-            <div><dt>경과</dt><dd>${relative(e2e.ts, now)}</dd></div>
-          </dl>
-          ${renderFailureList(
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>플로우</th>
+            <th class="right">통과</th>
+            <th class="right">실패</th>
+            <th class="right">실행 시각</th>
+            <th class="right">상태</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="strong">Maestro</td>
+            <td class="right mono">${e2e.passed}/${e2e.total}</td>
+            <td class="right mono">${failed.length}</td>
+            <td class="right mono muted">${escape(formatShort(e2e.ts))} · ${relative(e2e.ts, now)}</td>
+            <td class="right"><span class="state ${state.tone}">${state.text}</span></td>
+          </tr>${renderFailureRows(
             failed.map((flow) => ({
               key: flow.name,
               note: flow.step ?? "실패",
             })),
+            5,
           )}
-        </article>
-      </div>`;
+        </tbody>
+      </table>`;
 }
 
 function renderSentry(sentry, now) {
   if (!sentry) {
     return `
-      <div class="rows">
-        <article class="row idle">
-          <div class="row-head">
-            <div>
-              <h3 class="row-title">Sentry</h3>
-              <code class="row-url">@sentry/react-native</code>
-            </div>
-            <span class="badge idle">준비 중</span>
-          </div>
-          <p class="empty">DSN과 수집 Secrets가 설정되면 24시간 이벤트 수가 표시됩니다.</p>
-        </article>
-      </div>`;
+      <p class="empty">DSN과 수집 Secrets가 설정되면 24시간 이벤트 수가 표시됩니다. <span class="state idle">준비 중</span></p>`;
   }
 
   const state = sentryTone(sentry);
   const issues = sentry.issues ?? [];
   return `
-      <div class="rows">
-        <article class="row">
-          <div class="row-head">
-            <div>
-              <h3 class="row-title">Sentry</h3>
-              <code class="row-url">@sentry/react-native</code>
-            </div>
-            <span class="badge ${state.tone}">${state.text}</span>
-          </div>
-          <dl class="metrics">
-            <div><dt>24시간 이벤트</dt><dd>${sentry.count24h}</dd></div>
-            <div><dt>미해결 이슈</dt><dd>${issues.length}종</dd></div>
-            <div><dt>수집 시각</dt><dd>${escape(formatTime(sentry.ts))}</dd></div>
-            <div><dt>경과</dt><dd>${relative(sentry.ts, now)}</dd></div>
-          </dl>
-          ${renderFailureList(
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>수집</th>
+            <th class="right">24시간 이벤트</th>
+            <th class="right">미해결 이슈</th>
+            <th class="right">수집 시각</th>
+            <th class="right">상태</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="strong">Sentry</td>
+            <td class="right mono">${sentry.count24h}</td>
+            <td class="right mono">${issues.length}</td>
+            <td class="right mono muted">${escape(formatShort(sentry.ts))} · ${relative(sentry.ts, now)}</td>
+            <td class="right"><span class="state ${state.tone}">${state.text}</span></td>
+          </tr>${renderFailureRows(
             issues.map((issue) => ({
               key: `${issue.count}회`,
               note: issue.title,
             })),
+            5,
           )}
-        </article>
-      </div>`;
-}
-
-/**
- * 여러 상태 중 가장 나쁜 것을 고른다. 나쁜 소식이 좋은 소식에 가려지면 안 된다.
- * idle(데이터 없음)은 ok보다 나쁘게 본다 — "모름"을 "정상"으로 보이면 안 되므로.
- */
-export function worstTone(tones) {
-  const order = ["bad", "warn", "idle", "ok"];
-  return order.find((tone) => tones.includes(tone)) ?? "idle";
+        </tbody>
+      </table>`;
 }
 
 /** 사이드바 항목. 각 탭 옆의 점이 그 영역의 상태를 그대로 말한다. */
@@ -455,86 +456,54 @@ export function renderStatusPage({
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="light">
 <!-- 열어둔 탭이 낡지 않도록 5분마다 새로 받는다. -->
 <meta http-equiv="refresh" content="300">
 <title>Afterglow 상태</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-/* ── 색: packages/tokens/src/index.ts 의 시맨틱 토큰을 그대로 옮겼다 ── */
+/* 색은 packages/tokens/src/index.ts 의 시맨틱 토큰을 그대로 옮겼다. 라이트 전용. */
 :root {
-  --bg: #f7f8f8;              /* bg */
-  --surface: #ffffff;         /* surface */
-  --surface-muted: #f2f4f6;   /* surface-muted */
-  --surface-accent: #f0faff;  /* surface-accent */
-  --border: #d4dce5;          /* border */
-  --border-soft: #e6eaf0;     /* neutral-200 */
-  --text: #171c21;            /* text */
-  --text-secondary: #3f4b58;  /* text-secondary */
-  --text-muted: #8894a6;      /* text-muted */
-  --primary: #0787d0;         /* primary-600 */
-  --primary-strong: #00689a;  /* primary-700 */
-  --ok: #1f9d55;              /* success-700 */
-  --ok-weak: #eefcf4;
-  --warn: #b7791f;            /* warning-700 */
-  --warn-weak: #fff8e6;
-  --bad: #c62828;             /* error-700 */
-  --bad-weak: #fff1f1;
-  --idle: #b8c4d0;            /* neutral-400 */
-  --idle-weak: #f2f4f6;
-  --sidebar: rgba(255, 255, 255, 0.72);
-  --shadow: 0 1px 2px rgba(23, 28, 33, 0.04), 0 1px 1px rgba(23, 28, 33, 0.03);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #10151f;
-    --surface: #1a2233;
-    --surface-muted: #151d2b;
-    --surface-accent: #16283a;
-    --border: #2f4054;          /* secondary-700 */
-    --border-soft: #26344a;
-    --text: #dce4ef;            /* secondary-100 */
-    --text-secondary: #aec6da;  /* secondary-200 */
-    --text-muted: #7f90a6;
-    --primary: #43c8ff;         /* primary-400 */
-    --primary-strong: #86d8ff;  /* primary-300 */
-    --ok: #2ecc71;
-    --ok-weak: #12291e;
-    --warn: #f4b400;
-    --warn-weak: #2b2413;
-    --bad: #ff6b66;
-    --bad-weak: #2e1a1a;
-    --idle: #4b607d;            /* secondary-500 */
-    --idle-weak: #1d2739;
-    --sidebar: rgba(26, 34, 51, 0.72);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  }
+  --paper: #ffffff;        /* surface */
+  --wash: #f7f8f8;         /* bg */
+  --wash-2: #f2f4f6;       /* surface-muted */
+  --rule: #e6eaf0;         /* neutral-200 */
+  --rule-strong: #d4dce5;  /* border */
+  --ink: #171c21;          /* text */
+  --ink-2: #3f4b58;        /* text-secondary */
+  --ink-3: #8894a6;        /* text-muted */
+  --accent: #0787d0;       /* primary-600 */
+  --accent-deep: #00689a;  /* primary-700 */
+  --ok: #1f9d55;           /* success-700 */
+  --warn: #b7791f;         /* warning-700 */
+  --bad: #c62828;          /* error-700 */
+  --idle: #b8c4d0;         /* neutral-400 */
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--paper);
+  color: var(--ink);
   /* fontFamily.sans = Pretendard */
   font-family: "Pretendard Variable", Pretendard, -apple-system,
     BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, sans-serif;
-  font-size: 14px;      /* body-sm */
+  font-size: 14px;   /* body-sm */
   line-height: 20px;
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
 }
 
-code, .mono, .num {
-  font-family: SFMono-Regular, Menlo, monospace;  /* fontFamily.mono */
+/* 고정폭은 숫자에만. 헤더의 한글까지 고정폭이면 어색하게 벌어진다. */
+.mono {
+  font-family: SFMono-Regular, Menlo, monospace;   /* fontFamily.mono */
   font-variant-numeric: tabular-nums;
 }
 
-/* ── 레이아웃: 고정 사이드바 + 스크롤되는 본문 ── */
-.app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+.app { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
 
+/* ── 사이드바: 채우지 않고 세로 괘선 하나로만 나눈다 ── */
 .sidebar {
   position: sticky;
   top: 0;
@@ -542,76 +511,73 @@ code, .mono, .num {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px 16px;
-  background: var(--sidebar);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-right: 1px solid var(--border-soft);
+  gap: 28px;
+  padding: 28px 20px;
+  border-right: 1px solid var(--rule);
 }
 
-.brand { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; }
-.brand b { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; }
+.brand { display: flex; flex-direction: column; gap: 1px; }
+.brand b { font-size: 15px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; }
 .brand span {
   font-size: 10px; line-height: 14px; font-weight: 500;   /* overline */
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
 }
 
-.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav { display: flex; flex-direction: column; }
 
 .nav button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
-  padding: 7px 8px;
+  padding: 7px 0;
   border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--text-secondary);
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  color: var(--ink-2);
   font: inherit;
-  font-size: 14px; line-height: 20px; font-weight: 500;
+  font-size: 14px; line-height: 20px;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
-.nav button:hover { background: var(--surface-muted); color: var(--text); }
+.nav button:first-child { border-top: 1px solid var(--rule); }
+.nav button:hover { color: var(--ink); }
 
 .nav button[aria-selected="true"] {
-  background: var(--surface-accent);
-  color: var(--primary-strong);
+  color: var(--ink);
   font-weight: 600;   /* label-md */
 }
 
-.nav button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-.dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--idle); }
+.dot { width: 6px; height: 6px; border-radius: 50%; flex: none; background: var(--idle); }
 .dot.ok { background: var(--ok); }
 .dot.warn { background: var(--warn); }
 .dot.bad { background: var(--bad); }
 
-.sidebar-foot {
+.stamp {
   margin-top: auto;
-  padding: 0 8px;
-  font-size: 12px; line-height: 16px;   /* caption */
-  color: var(--text-muted);
-  display: flex; flex-direction: column; gap: 2px;
+  font-size: 12px; line-height: 18px;
+  color: var(--ink-3);
+  display: flex; flex-direction: column; gap: 1px;
 }
 
-/* 본문은 읽기 좋은 폭에서 멈춘다 — 넓은 화면에서 표가 끝없이 늘어나지 않게. */
-main { min-width: 0; padding: 24px clamp(16px, 4vw, 40px) 64px; }
-main > * { max-width: 1120px; }
+.stamp b { color: var(--ink-2); font-weight: 600; }
+
+/* ── 본문 ── */
+main { min-width: 0; padding: 28px clamp(16px, 3.5vw, 36px) 72px; }
+main > * { max-width: 1080px; }
 
 .topbar {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  padding-bottom: 20px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 14px;
+  margin-bottom: 28px;
+  border-bottom: 2px solid var(--ink);
 }
 
 .topbar h1 {
@@ -620,186 +586,139 @@ main > * { max-width: 1120px; }
   letter-spacing: -0.02em;
 }
 
-.status-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 12px 5px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-size: 12px; line-height: 18px; font-weight: 600;   /* label-sm */
-  box-shadow: var(--shadow);
-}
+.headline { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
 
-/* ── 개요 타일 ── */
-.tiles {
+/* ── 요약: 카드가 아니라 괘선으로 나눈 한 줄 ── */
+.stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-bottom: 32px;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 36px;
 }
 
-.tile {
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: var(--shadow);
-  display: flex; flex-direction: column; gap: 4px;
-  min-width: 0;
+.stat { padding: 16px 20px 16px 0; }
+.stat + .stat { border-left: 1px solid var(--rule); padding-left: 20px; }
+
+.stat-label {
+  margin: 0 0 6px;
+  font-size: 10px; line-height: 14px; font-weight: 500;   /* overline */
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
 }
 
-.tile-label {
+.stat-value {
   margin: 0;
-  font-size: 12px; line-height: 18px; font-weight: 600;   /* label-sm */
-  color: var(--text-secondary);
-}
-
-.tile-value {
-  margin: 0;
-  font-size: 32px; line-height: 40px; font-weight: 600;   /* heading-lg 크기 */
-  letter-spacing: -0.03em;
+  font-family: SFMono-Regular, Menlo, monospace;
+  font-size: 28px; line-height: 36px; font-weight: 600;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
-.tile-unit { font-size: 18px; font-weight: 500; margin-left: 2px; color: var(--text-secondary); }
-.tile-sub { margin: 0; font-size: 12px; line-height: 16px; color: var(--text-muted); }
+.stat-value.ok { color: var(--ok); }
+.stat-value.bad { color: var(--bad); }
+.stat-value.warn { color: var(--warn); }
+.stat-value.idle { color: var(--ink-3); }
 
-.tile.ok .tile-value { color: var(--ok); }
-.tile.bad .tile-value { color: var(--bad); }
-.tile.warn .tile-value { color: var(--warn); }
-.tile.idle .tile-value { color: var(--text-muted); }
+.stat-sub { margin: 2px 0 0; font-size: 12px; line-height: 16px; color: var(--ink-3); }
 
-/* ── 블록 / 목록 ── */
-.block { display: flex; flex-direction: column; gap: 12px; }
-
-.block-title {
-  margin: 0;
+.section {
+  margin: 0 0 10px;
   font-size: 10px; line-height: 14px; font-weight: 500;   /* overline */
-  letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--text-muted);
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
 }
 
-.events {
-  margin: 0; padding: 0; list-style: none;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  overflow: hidden;
+/* ── 표: 콘솔처럼 촘촘하게, 괘선만으로 ── */
+.grid { width: 100%; border-collapse: collapse; }
+
+.grid th {
+  text-align: left;
+  padding: 0 12px 7px 0;
+  border-bottom: 1px solid var(--rule-strong);
+  font-size: 11px; line-height: 16px; font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  white-space: nowrap;
 }
 
-.events li {
+.grid td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: baseline;
+  color: var(--ink-2);
+}
+
+.grid th:last-child, .grid td:last-child { padding-right: 0; }
+.grid .right { text-align: right; }
+.grid .strong { color: var(--ink); font-weight: 600; }
+.grid .muted { color: var(--ink-3); }
+/* "09.09 18:15"이 한 줄에 들어가는 폭. 모자라면 두 줄로 깨져 정렬이 무너진다. */
+.grid .col-time { width: 112px; }
+.event-time, .fail-key { white-space: nowrap; }
+.grid .col-key { width: 148px; }
+
+/* 상태 띠와 실패 목록은 같은 행에 딸린 정보라 위 경계선을 지운다. */
+.grid .bar-row td { border-bottom: 0; padding: 0 0 10px; }
+.grid .fail-row td { padding: 0 0 12px; }
+
+.state { font-size: 12px; line-height: 18px; font-weight: 600; color: var(--ink-3); }
+.state.ok { color: var(--ok); }
+.state.warn { color: var(--warn); }
+.state.bad { color: var(--bad); }
+
+/*
+ * 가동 띠는 "문제가 어디 있었나"를 보여주는 장치다. 정상 구간을 색으로 칠하면
+ * 화면에서 가장 큰 요소가 아무 정보도 없는 초록/파랑 띠가 된다. 정상은 조용한
+ * 회색으로 두고 실패에만 색을 준다 — 눈이 바로 빨간 칸으로 간다.
+ */
+.bars { display: flex; gap: 1px; height: 14px; align-items: stretch; }
+.bars i { flex: 1; background: var(--wash-2); }      /* 기록 없음 */
+.bars i.ok { background: var(--rule-strong); }        /* 정상 */
+.bars i.bad { background: var(--bad); }               /* 실패 */
+
+.fails { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+
+.fails li {
   display: grid;
-  grid-template-columns: 104px 132px 1fr;
+  grid-template-columns: 112px 1fr;
   gap: 12px;
   align-items: baseline;
-  padding: 11px 16px;
-  border-top: 1px solid var(--border-soft);
-}
-
-.events li:first-child { border-top: 0; }
-
-.event-time { font-family: SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--text-muted); }
-.event-key { font-weight: 600; font-size: 13px; }
-.event-note { color: var(--text-secondary); min-width: 0; overflow-wrap: anywhere; }
-
-.empty {
-  margin: 0;
-  padding: 20px 0 4px;
-  color: var(--text-muted);
   font-size: 13px;
 }
 
-/* ── 상세 행 ── */
-.rows { display: flex; flex-direction: column; gap: 12px; }
-
-.row {
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  padding: 18px 20px;
-  box-shadow: var(--shadow);
-  display: flex; flex-direction: column; gap: 14px;
-  min-width: 0;
+.fail-key {
+  font-family: SFMono-Regular, Menlo, monospace;
+  font-size: 12px; font-weight: 600; color: var(--bad);
 }
 
-.row.idle { background: var(--surface-muted); box-shadow: none; }
+.fail-note { color: var(--ink-2); overflow-wrap: anywhere; }
+.fails .fail-more { display: block; color: var(--ink-3); font-size: 12px; }
 
-.row-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.row-title { margin: 0 0 2px; font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; }
-.row-url { font-size: 12px; color: var(--text-muted); overflow-wrap: anywhere; }
-
-.badge {
-  flex: none;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px; line-height: 18px; font-weight: 600;   /* label-sm */
-  background: var(--idle-weak); color: var(--text-muted);
-}
-.badge.ok { background: var(--ok-weak); color: var(--ok); }
-.badge.warn { background: var(--warn-weak); color: var(--warn); }
-.badge.bad { background: var(--bad-weak); color: var(--bad); }
-
-.bars { display: flex; gap: 2px; height: 32px; align-items: stretch; }
-.bars i { flex: 1; border-radius: 2px; background: var(--idle-weak); }
-.bars i.ok { background: var(--ok); opacity: 0.85; }
-.bars i.bad { background: var(--bad); }
-
-.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 0; }
-.metrics div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.metrics dt { font-size: 12px; line-height: 16px; color: var(--text-muted); }
-.metrics dd {
-  margin: 0;
-  font-size: 15px; line-height: 22px; font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
-}
-
-.fails {
-  margin: 0; padding: 12px 0 0; list-style: none;
-  border-top: 1px solid var(--border-soft);
-  display: flex; flex-direction: column; gap: 8px;
-}
-
-.fails li { display: grid; grid-template-columns: 104px 1fr; gap: 12px; align-items: baseline; font-size: 13px; }
-.fail-key { font-family: SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--bad); font-weight: 600; }
-.fail-note { color: var(--text-secondary); overflow-wrap: anywhere; }
-.fails .fail-more { display: block; color: var(--text-muted); font-size: 12px; }
-
-footer {
-  margin-top: 40px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-soft);
-  font-size: 12px; line-height: 18px;
-  color: var(--text-muted);
-}
-
-footer code { font-size: 11px; }
+.empty { margin: 0; padding: 4px 0; color: var(--ink-3); font-size: 13px; }
 
 [hidden] { display: none !important; }
 
-/* ── 좁은 화면: 사이드바를 상단 탭 바로 ── */
 @media (max-width: 720px) {
   .app { grid-template-columns: 1fr; }
   .sidebar {
     position: static; height: auto;
-    flex-direction: row; align-items: center; gap: 12px;
+    flex-direction: row; align-items: center; gap: 16px;
     padding: 12px 16px;
-    border-right: 0; border-bottom: 1px solid var(--border-soft);
+    border-right: 0; border-bottom: 1px solid var(--rule);
     overflow-x: auto;
   }
-  .brand { display: none; }
-  .nav { flex-direction: row; gap: 4px; }
-  .nav button { white-space: nowrap; }
-  .sidebar-foot { display: none; }
-  .events li { grid-template-columns: 1fr; gap: 2px; }
-  .fails li { grid-template-columns: 1fr; gap: 2px; }
-  .topbar h1 { font-size: 20px; line-height: 28px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; }
+  .brand, .stamp { display: none; }
+  .nav { flex-direction: row; gap: 16px; }
+  .nav button { border: 0; white-space: nowrap; width: auto; padding: 4px 0; }
+  .nav button:first-child { border-top: 0; }
+  main { padding-top: 20px; }
+  .stats { grid-template-columns: 1fr; }
+  .stat + .stat { border-left: 0; border-top: 1px solid var(--rule); padding-left: 0; }
+  .grid, .grid thead, .grid tbody, .grid tr, .grid td { display: block; }
+  .grid thead { display: none; }
+  .grid td { border-bottom: 0; padding: 2px 0; }
+  .grid tr { border-bottom: 1px solid var(--rule); padding: 10px 0; }
+  .grid .right { text-align: left; }
+  .fails li { grid-template-columns: 1fr; gap: 1px; }
 }
 </style>
 </head>
@@ -823,16 +742,16 @@ ${NAV.map(
 ).join("\n")}
     </nav>
 
-    <div class="sidebar-foot">
-      <span>갱신 ${escape(KST.format(new Date(now)))}</span>
+    <p class="stamp">
+      <b>${escape(KST.format(new Date(now)))}</b>
       <span>30분마다 자동 점검</span>
-    </div>
+    </p>
   </aside>
 
   <main>
     <div class="topbar">
       <h1 id="page-title">${titles.overview}</h1>
-      <span class="status-pill"><span class="dot ${allOk ? "ok" : "bad"}"></span>${headline}</span>
+      <span class="headline"><span class="dot ${allOk ? "ok" : "bad"}"></span>${headline}</span>
     </div>
 
 ${NAV.map(
@@ -844,12 +763,6 @@ ${NAV.map(
   }>${panels[item.id]}
     </section>`,
 ).join("\n")}
-
-    <footer>
-      이 페이지는 <code>.github/workflows/health.yml</code>이 남긴 기록을 구운 정적 문서입니다.
-      갱신 시각이 30분 넘게 멈춰 있으면 서버가 아니라 <b>워크플로가 멈춘 것</b>입니다
-      (스케줄 워크플로는 저장소가 60일간 조용하면 GitHub이 자동 비활성화합니다).
-    </footer>
   </main>
 </div>
 
