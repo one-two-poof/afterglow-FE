@@ -10,8 +10,8 @@ name: E2E
 
 on:
   schedule:
-    # 03:00 KST (18:00 UTC). GitHub 스케줄은 지연될 수 있다.
-    - cron: "0 18 * * *"
+    # 03:41 KST (18:41 UTC). 정시는 스케줄 큐가 몰려 누락이 잦아 몇 분 비켜 둔다.
+    - cron: "41 18 * * *"
   workflow_dispatch:
   push:
     branches: [main]
