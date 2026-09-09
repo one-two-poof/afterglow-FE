@@ -1,0 +1,140 @@
+# Maestro E2E (iOS 시뮬레이터).
+#
+# 로컬 .maestro/run.sh는 Expo dev-client + Metro가 떠 있는 걸 전제한다. CI에는 그런
+# 상태가 없으므로 JS 번들이 앱에 내장되는 Release 시뮬레이터 빌드를 만들어 돌린다.
+# 결과는 JUnit → 요약 JSON으로 바꿔 status-data 브랜치에 남기고 상태 페이지가 그린다.
+#
+# 잡 1회에 20~40분 걸린다(prebuild + pod install + Release 빌드). 그래서 매 PR이 아니라
+# 야간 정기 + main 푸시 + 수동 실행으로만 돈다.
+name: E2E
+
+on:
+  schedule:
+    # 03:00 KST (18:00 UTC). GitHub 스케줄은 지연될 수 있다.
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/**"
+      - ".github/workflows/e2e.yml"
+
+concurrency:
+  group: e2e
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  maestro:
+    # public 레포라 macOS 러너도 무료다.
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: 의존성 설치
+        run: pnpm install --frozen-lockfile
+
+      # Podfile.lock은 pod install이 만들므로 캐시 키로 못 쓴다(그걸로 잡으면 키가
+      # 영영 안 바뀌어 낡은 Pods가 계속 복원된다). 대신 pod 구성을 실제로 결정하는
+      # 입력들로 키를 잡는다.
+      - name: CocoaPods 캐시
+        uses: actions/cache@v4
+        with:
+          path: apps/mobile/ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/package.json', 'apps/mobile/app.json') }}
+          restore-keys: pods-${{ runner.os }}-
+
+      # ios/는 gitignore 대상(CNG)이라 매번 생성한다. --no-install로 pod은 따로 돌린다.
+      - name: iOS 네이티브 프로젝트 생성
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --platform ios --no-install
+
+      - name: pod install
+        working-directory: apps/mobile/ios
+        run: pod install
+
+      # Release 구성이어야 JS 번들이 앱에 embed된다(Debug는 Metro를 찾는다).
+      # 시뮬레이터 빌드라 서명은 필요 없다.
+      - name: 시뮬레이터용 Release 빌드
+        working-directory: apps/mobile/ios
+        run: |
+          xcodebuild -workspace afterglow.xcworkspace -scheme afterglow \
+            -configuration Release -sdk iphonesimulator \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: 시뮬레이터 부팅 + 앱 설치
+        id: simulator
+        run: |
+          UDID=$(xcrun simctl list -j devices available \
+            | jq -r '[.devices[][] | select(.name | startswith("iPhone"))] | last | .udid')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" \
+            apps/mobile/ios/build/Build/Products/Release-iphonesimulator/afterglow.app
+          # 방어적 조치: 지금 플로우는 위치 권한을 건드리지 않지만, 시스템 권한 팝업이
+          # 뜨면 플로우가 통째로 막히므로 미리 허용해 둔다.
+          xcrun simctl privacy "$UDID" grant location com.dunaduneos.afterglow || true
+
+      - name: Maestro 설치
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: 플로우 실행
+        id: maestro
+        continue-on-error: true
+        env:
+          MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED: "true"
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
+        run: |
+          maestro --device "${{ steps.simulator.outputs.udid }}" test apps/mobile/.maestro \
+            --exclude-tags=subflow \
+            --format junit --output report.xml \
+            --debug-output maestro-artifacts
+
+      # 실패한 실행일수록 스크린샷이 필요하다 — 결과와 무관하게 올린다.
+      - name: 실행 아티팩트 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-artifacts
+          path: |
+            maestro-artifacts
+            report.xml
+          retention-days: 14
+
+      - name: status-data 준비
+        if: always()
+        uses: ./.github/actions/status-data-checkout
+        with:
+          token: ${{ github.token }}
+
+      - name: 요약 JSON 생성
+        if: always()
+        run: node scripts/e2e-report.mjs --input report.xml --out .status-data
+
+      - name: 기록 커밋
+        if: always()
+        uses: ./.github/actions/status-data-commit
+        with:
+          message: "chore(status): E2E 결과 ${{ github.run_number }}"
+
+      - name: 플로우 실패 시 잡 실패 처리
+        if: steps.maestro.outcome == 'failure'
+        run: |
+          echo "::error::Maestro 플로우가 실패했다. 아티팩트의 스크린샷과 상태 페이지를 확인할 것."
+          exit 1

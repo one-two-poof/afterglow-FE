@@ -33,20 +33,9 @@ jobs:
 
       # status-data는 코드가 없는 기록 전용 브랜치다. 없으면 이번 푸시로 만들어진다.
       - name: status-data 브랜치 준비
-        env:
-          REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
-        run: |
-          mkdir -p .status-data
-          cd .status-data
-          git init -q -b status-data
-          git remote add origin "$REMOTE"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git fetch -q --depth 50 origin status-data; then
-            git reset -q --hard FETCH_HEAD
-          else
-            echo "status-data 브랜치가 아직 없다 — 이번 실행이 처음 만든다"
-          fi
+        uses: ./.github/actions/status-data-checkout
+        with:
+          token: ${{ github.token }}
 
       - name: 프로브 실행
         id: probe
@@ -55,15 +44,9 @@ jobs:
 
       # 실패한 실행의 기록도 남겨야 하므로 커밋은 프로브 결과와 무관하게 돈다.
       - name: 기록 커밋
-        working-directory: .status-data
-        run: |
-          git add -A
-          if git diff --cached --quiet; then
-            echo "변경 없음"
-            exit 0
-          fi
-          git commit -q -m "chore(status): 헬스체크 $(date -u '+%Y-%m-%dT%H:%MZ')"
-          git push -q origin status-data
+        uses: ./.github/actions/status-data-commit
+        with:
+          message: "chore(status): 헬스체크 ${{ github.run_number }}"
 
       - name: 프로브 실패 시 잡 실패 처리
         if: steps.probe.outcome == 'failure'

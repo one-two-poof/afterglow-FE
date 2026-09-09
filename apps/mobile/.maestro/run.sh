@@ -7,7 +7,8 @@
 #
 # 동작:
 #   - Java(keg-only openjdk)와 maestro를 PATH에 올린다.
-#   - 스텝별 스크린샷/화면계층/로그를 .maestro/artifacts/<타임스탬프>/ 에 저장한다(사후 확인용).
+#   - 스텝별 스크린샷/화면계층/로그와 JUnit 리포트를 .maestro/artifacts/<타임스탬프>/ 에
+#     저장한다(사후 확인용).
 #   - subflows/ 의 공용 서브플로우는 단독 실행 대상이 아니므로 tags:[subflow]로 제외한다
 #     (디렉터리 실행은 하위 디렉터리까지 훑기 때문에 태그로 걸러야 한다).
 #
@@ -33,4 +34,8 @@ TARGET="${1:-${MOBILE_DIR}/.maestro}"
 
 echo "▶ maestro test ${TARGET}"
 echo "  artifacts → ${OUT}"
-maestro test "${TARGET}" --exclude-tags=subflow --debug-output "${OUT}"
+# --format junit: CI(.github/workflows/e2e.yml)와 같은 리포트를 로컬에서도 남긴다.
+#   scripts/e2e-report.mjs로 요약 JSON까지 만들어 볼 수 있다.
+maestro test "${TARGET}" --exclude-tags=subflow \
+  --format junit --output "${OUT}/report.xml" \
+  --debug-output "${OUT}"
