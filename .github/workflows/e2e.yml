@@ -30,7 +30,9 @@ permissions:
 jobs:
   maestro:
     # public 레포라 macOS 러너도 무료다.
-    runs-on: macos-15
+    # macos-15(Xcode 16.4 / Swift 6.1)로는 빌드되지 않는다 — Expo 57/RN 0.86의
+    # prebuilt 의존성이 Swift tools 6.2를 요구한다(= Xcode 26).
+    runs-on: macos-26
     timeout-minutes: 60
 
     steps:
@@ -45,6 +47,22 @@ jobs:
 
       - name: 의존성 설치
         run: pnpm install --frozen-lockfile
+
+      # 이미지에 Xcode가 여러 개 깔려 있고 기본값이 최신이 아닐 수 있다.
+      # 버전이 낮으면 20분 뒤 ExpoModulesJSI xcframework 빌드에서
+      # "package 'apple' is using Swift tools version 6.2.0"로 죽으므로 먼저 끊는다.
+      - name: Xcode 선택 + Swift 버전 확인
+        run: |
+          XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+          SWIFT=$(swift --version 2>&1 | grep -oE 'Swift version [0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+')
+          if [ "$(printf '%s\n6.2\n' "$SWIFT" | sort -V | head -1)" != "6.2" ]; then
+            echo "::error::Swift $SWIFT — Expo 57/RN 0.86은 Swift 6.2(Xcode 26) 이상이 필요하다"
+            exit 1
+          fi
+          echo "Swift $SWIFT — 요구사항 충족"
 
       # Podfile.lock은 pod install이 만들므로 캐시 키로 못 쓴다(그걸로 잡으면 키가
       # 영영 안 바뀌어 낡은 Pods가 계속 복원된다). 대신 pod 구성을 실제로 결정하는

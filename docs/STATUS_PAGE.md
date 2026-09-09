@@ -56,6 +56,11 @@ Slack/Discord webhook이나 Issue 자동 생성이 필요해지면 마지막 스
 
 야간 03:00 KST + `main` 푸시(앱·패키지 변경 시) + 수동 실행. 잡 1회 20~40분이라 매 PR에는 안 건다.
 
+**러너 이미지**: `macos-26`이어야 한다. `macos-15`(Xcode 16.4 / Swift 6.1)에서는
+Expo 57/RN 0.86의 prebuilt 의존성이 요구하는 Swift tools 6.2를 만족하지 못해
+`ExpoModulesJSI` xcframework 빌드가 실패한다. 워크플로가 시작 직후 Swift 버전을 검사해
+조건이 안 맞으면 20분짜리 빌드를 돌리기 전에 끊는다.
+
 **로컬과 CI가 다른 점**: `.maestro/run.sh`는 Expo dev-client + Metro가 떠 있는 걸 전제하지만
 CI에는 그 상태가 없다. 그래서 CI는 **Release 시뮬레이터 빌드**를 만든다 — Release여야 JS 번들이
 앱에 embed되고 Metro 없이 실행된다. `ios/`는 gitignore 대상(CNG)이라 매 실행마다 `expo prebuild`로
