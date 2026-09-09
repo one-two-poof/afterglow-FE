@@ -27,3 +27,7 @@ jobs:
 
       - name: Lint, type-check, test, build
         run: pnpm turbo run lint type-check test build
+
+      # turbo는 워크스페이스 패키지만 훑는다. 루트 scripts/의 테스트는 따로 돌린다.
+      - name: Root script tests
+        run: pnpm test:scripts

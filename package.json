@@ -12,9 +12,12 @@
     "start": "turbo run start",
     "lint": "turbo run lint",
     "perf:map:report": "node scripts/map-performance-report.mjs",
+    "health:check": "node scripts/health-check.mjs",
+    "status:build": "node scripts/build-status-page.mjs",
     "type-check": "turbo run type-check",
     "test": "turbo run test",
-    "test:map-performance-report": "node --test scripts/map-performance-report.test.mjs"
+    "test:map-performance-report": "node --test scripts/map-performance-report.test.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs"
   },
   "devDependencies": {
     "prettier": "^3.9.6",
