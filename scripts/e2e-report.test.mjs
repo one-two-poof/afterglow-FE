@@ -106,3 +106,28 @@ test("failure 엘리먼트가 없어도 status가 SUCCESS가 아니면 실패로
   assert.equal(testCase.ok, false);
   assert.equal(testCase.step, "상태 ERROR");
 });
+
+test("리포트 파일이 없으면 직전 기록을 지우지 않고 조용히 끝난다", async () => {
+  // 실행이 취소되면 maestro가 report.xml을 못 남긴다. 그때 0/0을 써 버리면
+  // 페이지가 "통과"로 보인다.
+  const { execFileSync } = await import("node:child_process");
+  const { mkdtempSync, existsSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+
+  const outDir = mkdtempSync(join(tmpdir(), "e2e-report-"));
+  const output = execFileSync(
+    process.execPath,
+    [
+      new URL("./e2e-report.mjs", import.meta.url).pathname,
+      "--input",
+      join(outDir, "없는-리포트.xml"),
+      "--out",
+      outDir,
+    ],
+    { encoding: "utf8" },
+  );
+
+  assert.match(output, /리포트가 없다/);
+  assert.equal(existsSync(join(outDir, "e2e", "latest.json")), false);
+});

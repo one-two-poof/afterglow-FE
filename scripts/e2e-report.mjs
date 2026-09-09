@@ -101,7 +101,19 @@ function parseArguments(argv) {
 
 async function main() {
   const options = parseArguments(process.argv.slice(2));
-  const report = buildReport(parseJUnit(await readFile(options.input, "utf8")));
+
+  let xml;
+  try {
+    xml = await readFile(options.input, "utf8");
+  } catch {
+    // 실행이 취소되면(야간 실행 중 main 푸시 → cancel-in-progress) maestro가 리포트를
+    // 남기지 못한 채 죽는다. 여기서 0/0을 기록하면 페이지가 "통과"로 보이므로 아무것도
+    // 쓰지 않고 직전 기록을 남겨둔다 — 카드의 갱신 시각이 낡은 걸 스스로 드러낸다.
+    console.log(`리포트가 없다(${options.input}) — 직전 E2E 기록을 유지한다`);
+    return;
+  }
+
+  const report = buildReport(parseJUnit(xml));
 
   const outDir = join(resolve(options.out), "e2e");
   await mkdir(outDir, { recursive: true });
