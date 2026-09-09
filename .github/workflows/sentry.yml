@@ -1,0 +1,48 @@
+# Sentry 요약 수집.
+#
+# 상태 페이지는 정적 HTML이라 브라우저에서 Sentry를 부를 수 없다(토큰이 공개된다).
+# 그래서 이 워크플로가 대신 Issues API를 읽어 status-data 브랜치에 요약만 남긴다.
+#
+# ⚠️ Secrets(SENTRY_AUTH_TOKEN·SENTRY_ORG·SENTRY_PROJECT)가 없으면 스크립트가 아무것도
+#    쓰지 않고 정상 종료한다 — Sentry 계정을 만들기 전에도 워크플로가 빨갛게 뜨지 않는다.
+name: Sentry summary
+
+on:
+  schedule:
+    # 매시 15분. 헬스체크(정시·30분)와 겹치지 않게 비켜 둔다.
+    - cron: "15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: sentry-summary
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: status-data 브랜치 준비
+        uses: ./.github/actions/status-data-checkout
+        with:
+          token: ${{ github.token }}
+
+      - name: Sentry 요약 수집
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node scripts/sentry-summary.mjs --out .status-data
+
+      - name: 기록 커밋
+        uses: ./.github/actions/status-data-commit
+        with:
+          message: "chore(status): Sentry 요약 ${{ github.run_number }}"

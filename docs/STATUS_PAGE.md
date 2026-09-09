@@ -8,13 +8,13 @@
 ```
 health.yml (30분 cron)  ──┐
 e2e.yml    (야간 + main)  ──┤→  status-data 브랜치  →  status-page.yml  →  GitHub Pages
-Sentry     (4단계, 예정)  ──┘      (기록 전용)           (정적 HTML 빌드)
+sentry.yml (매시)        ──┘      (기록 전용)           (정적 HTML 빌드)
 ```
 
 - **status-data**: 코드가 없는 기록 전용 브랜치. 워크플로가 자동으로 만든다(수동 생성 불필요).
   - `health/YYYY-MM.jsonl` — 프로브 결과 한 줄에 하나. 두 달치만 보관하고 나머지는 자동 삭제.
   - `e2e/latest.json` — 마지막 E2E 실행 요약.
-  - `sentry/latest.json` — 4단계에서 추가. 없으면 페이지에 "준비 중" 카드로 표시된다.
+  - `sentry/latest.json` — 24시간 이벤트 수와 상위 미해결 이슈. 없으면 "준비 중" 카드로 표시된다.
   - 두 워크플로가 같은 브랜치에 푸시하므로 커밋은 `.github/actions/status-data-*` 공용
     액션을 쓴다. 푸시가 겹치면 리베이스 후 재시도한다(서로 다른 파일이라 충돌 없음).
 - 페이지는 **빌드 타임에 값이 박히는 정적 HTML**이다. 런타임에 API를 부르지 않으므로 토큰이 페이지에 실리지 않고, 백엔드가 죽어도 페이지 자체는 뜬다.
@@ -74,6 +74,49 @@ CI에는 그 상태가 없다. 그래서 CI는 **Release 시뮬레이터 빌드*
 
 `run.sh`도 같은 JUnit 리포트를 `artifacts/<타임스탬프>/report.xml`에 남기므로 로컬에서도
 같은 요약을 만들어 볼 수 있다.
+
+## Sentry (`sentry.yml`)
+
+앱은 `@sentry/react-native`로 에러를 보내고, 워크플로가 매시 Issues API를 읽어
+`sentry/latest.json`으로 요약한다. 페이지가 브라우저에서 Sentry를 직접 부르지 않는 이유는
+정적 HTML에 토큰을 실을 수 없어서다.
+
+**DSN이 없으면 리포팅은 통째로 꺼진다**(`src/lib/monitoring.ts`). SDK를 초기화하지 않고
+리포트 호출도 무시하므로, Sentry 계정 없이도 앱과 워크플로가 그대로 돈다.
+
+### 무엇을 보내나
+
+`lib/axios.ts`의 응답 인터셉터에서 실패를 리포트한다 — 이 지점을 고른 이유는 여기서
+에러가 사용자 문구로 정규화되며 **원래 정보가 사라지기 때문**이다. 태그는
+`client`(main/ai) · `endpoint` · `status`. 응답 자체가 없던 실패는 `status: 0`이다.
+
+**401/403은 보내지 않는다.** 토큰 만료로 늘 발생하는 정상 흐름이라 무료 티어(월 5천 이벤트)를
+의미 없이 태운다.
+
+### 개인정보
+
+**쿼리스트링은 항상 잘라낸다.** `/api/places`는 뷰포트 `bbox`(= 사용자 위치)를 쿼리로 보내므로
+URL을 그대로 올리면 위치 이력이 Sentry에 쌓인다. `scrubEvent`가 전송 직전에 쿼리스트링·요청
+본문·`Authorization`/`Cookie` 헤더·`user` 필드를 모두 제거하고, `sendDefaultPii: false`로
+이중 방어한다. `docs/performance`의 "정확한 위치 좌표는 수집하지 않는다" 기준과 같은 선이다.
+
+### 설정 (계정 만든 뒤)
+
+1. Sentry에서 React Native 프로젝트 생성 → DSN 복사
+2. `apps/mobile/.env`와 `eas.json`의 `env`에 `EXPO_PUBLIC_SENTRY_DSN` 추가
+   (DSN은 공개돼도 되는 값이다 — 쓰기 전용 엔드포인트)
+3. 저장소 Secrets에 `SENTRY_AUTH_TOKEN`(Issues 읽기 권한) · `SENTRY_ORG` · `SENTRY_PROJECT` 추가
+4. 앱 재빌드 (`EXPO_PUBLIC_`은 번들 타임에 인라인된다)
+
+### 아직 안 한 것 — 소스맵
+
+Expo config plugin(`@sentry/react-native/expo`)은 **일부러 넣지 않았다.** 이 플러그인은
+소스맵 업로드 빌드 단계를 추가하는데, org/project/토큰이 없으면 설정할 게 없고, pnpm이
+`@sentry/cli`의 빌드 스크립트를 막아둔 상태라 CI 빌드가 깨질 위험이 있다.
+그동안 Release 빌드의 JS 스택 트레이스는 minify된 채로 올라간다.
+
+계정을 만든 뒤 플러그인을 추가하려면 `.npmrc`나 `pnpm approve-builds`로 `@sentry/cli`
+빌드 스크립트를 허용해야 하고, E2E CI 빌드가 통과하는지 확인해야 한다.
 
 ## 로컬에서 돌리기
 
