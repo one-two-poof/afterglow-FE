@@ -1,0 +1,26 @@
+name: status-data 준비
+description: 기록 전용 status-data 브랜치를 .status-data 에 체크아웃한다. 브랜치가 없으면 빈 상태로 시작한다.
+
+inputs:
+  token:
+    description: 푸시에 쓸 토큰 (보통 github.token)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        REMOTE: https://x-access-token:${{ inputs.token }}@github.com/${{ github.repository }}.git
+      run: |
+        mkdir -p .status-data
+        cd .status-data
+        git init -q -b status-data
+        git remote add origin "$REMOTE"
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        if git fetch -q --depth 50 origin status-data; then
+          git reset -q --hard FETCH_HEAD
+        else
+          echo "status-data 브랜치가 아직 없다 — 이번 실행이 처음 만든다"
+        fi

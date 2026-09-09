@@ -31,3 +31,20 @@ jobs:
       # turbo는 워크스페이스 패키지만 훑는다. 루트 scripts/의 테스트는 따로 돌린다.
       - name: Root script tests
         run: pnpm test:scripts
+
+      # e2e.yml은 디렉터리를 통째로 훑고 --exclude-tags=subflow로 거른다. 즉 제외 기준은
+      # 경로가 아니라 태그다. subflows/에 태그 없는 파일을 두면 단독 실행 대상이 돼
+      # 야간 E2E가 깨진다 — 매 PR에서 미리 잡는다.
+      - name: Maestro 서브플로우 태그 검사
+        run: |
+          missing=""
+          while IFS= read -r file; do
+            grep -qE '^[[:space:]]*-[[:space:]]*subflow[[:space:]]*$' "$file" || missing="$missing $file"
+          done < <(find apps/mobile/.maestro/subflows -name '*.yaml' 2>/dev/null)
+
+          if [ -n "$missing" ]; then
+            echo "::error::tags에 subflow가 없는 서브플로우:$missing"
+            echo "e2e.yml의 --exclude-tags=subflow에 걸러지지 않아 단독 실행된다."
+            exit 1
+          fi
+          echo "서브플로우 태그 정상"

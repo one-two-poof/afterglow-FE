@@ -138,3 +138,20 @@ test("E2E·Sentry 데이터가 있으면 카드에 채워진다", () => {
   assert.match(html, /signup-validation/);
   assert.match(html, /TypeError/);
 });
+
+test("실패가 많아도 카드는 5건까지만 나열하고 나머지는 건수로 알린다", () => {
+  const failed = Array.from({ length: 8 }, (_, index) => ({
+    name: `flow-${index}`,
+    step: "타임아웃",
+  }));
+
+  const html = renderStatusPage({
+    probes: summarizeHealth([], { now: NOW }),
+    e2e: { ts: minutesAgo(10), total: 12, passed: 4, failed },
+    now: NOW,
+  });
+
+  assert.match(html, /flow-4/);
+  assert.doesNotMatch(html, /flow-5/);
+  assert.match(html, /외 3건/);
+});

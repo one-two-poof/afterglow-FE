@@ -7,13 +7,16 @@
 
 ```
 health.yml (30분 cron)  ──┐
-e2e.yml    (3단계, 예정)  ──┤→  status-data 브랜치  →  status-page.yml  →  GitHub Pages
+e2e.yml    (야간 + main)  ──┤→  status-data 브랜치  →  status-page.yml  →  GitHub Pages
 Sentry     (4단계, 예정)  ──┘      (기록 전용)           (정적 HTML 빌드)
 ```
 
 - **status-data**: 코드가 없는 기록 전용 브랜치. 워크플로가 자동으로 만든다(수동 생성 불필요).
   - `health/YYYY-MM.jsonl` — 프로브 결과 한 줄에 하나. 두 달치만 보관하고 나머지는 자동 삭제.
-  - `e2e/latest.json`, `sentry/latest.json` — 3·4단계에서 추가. 없으면 페이지에 "준비 중" 카드로 표시된다.
+  - `e2e/latest.json` — 마지막 E2E 실행 요약.
+  - `sentry/latest.json` — 4단계에서 추가. 없으면 페이지에 "준비 중" 카드로 표시된다.
+  - 두 워크플로가 같은 브랜치에 푸시하므로 커밋은 `.github/actions/status-data-*` 공용
+    액션을 쓴다. 푸시가 겹치면 리베이스 후 재시도한다(서로 다른 파일이라 충돌 없음).
 - 페이지는 **빌드 타임에 값이 박히는 정적 HTML**이다. 런타임에 API를 부르지 않으므로 토큰이 페이지에 실리지 않고, 백엔드가 죽어도 페이지 자체는 뜬다.
 
 ## 최초 1회 설정
@@ -49,6 +52,29 @@ Sentry     (4단계, 예정)  ──┘      (기록 전용)           (정적 H
 GitHub이 저장소 소유자에게 메일을 보낸다** — 지금은 이게 유일한 경보다.
 Slack/Discord webhook이나 Issue 자동 생성이 필요해지면 마지막 스텝에 붙이면 된다.
 
+## E2E (`e2e.yml`)
+
+야간 03:00 KST + `main` 푸시(앱·패키지 변경 시) + 수동 실행. 잡 1회 20~40분이라 매 PR에는 안 건다.
+
+**로컬과 CI가 다른 점**: `.maestro/run.sh`는 Expo dev-client + Metro가 떠 있는 걸 전제하지만
+CI에는 그 상태가 없다. 그래서 CI는 **Release 시뮬레이터 빌드**를 만든다 — Release여야 JS 번들이
+앱에 embed되고 Metro 없이 실행된다. `ios/`는 gitignore 대상(CNG)이라 매 실행마다 `expo prebuild`로
+생성하고, Pods만 캐시한다.
+
+결과는 JUnit XML → `scripts/e2e-report.mjs` → `e2e/latest.json`으로 요약해 상태 페이지가 읽는다.
+스크린샷·화면계층은 Actions 아티팩트로 14일 보관한다(실패했을 때 이게 제일 쓸모 있다).
+
+**플로우를 추가할 때**: `.maestro/`에 `.yaml`을 놓으면 워크플로 수정 없이 자동으로 포함된다
+(디렉터리를 통째로 훑는다). 단 공용 **서브플로우는 `tags: [subflow]`를 반드시 붙여야 한다** —
+제외 기준이 경로가 아니라 태그라서, 빠뜨리면 단독 실행 대상이 돼 실패한다. CI(`ci.yml`)가
+매 PR에서 이걸 검사한다.
+
+플로우가 8~10개를 넘어가면 잡 `timeout-minutes: 60`이 빠듯해진다(빌드에만 25~30분).
+그때는 타임아웃을 올리거나 빌드를 아티팩트로 공유하고 플로우를 매트릭스 잡으로 나눠야 한다.
+
+`run.sh`도 같은 JUnit 리포트를 `artifacts/<타임스탬프>/report.xml`에 남기므로 로컬에서도
+같은 요약을 만들어 볼 수 있다.
+
 ## 로컬에서 돌리기
 
 ```bash
@@ -57,6 +83,10 @@ pnpm health:check -- --out /tmp/status-data         # JSONL까지 기록
 pnpm status:build -- --data /tmp/status-data --out /tmp/site/index.html
 open /tmp/site/index.html
 pnpm test:scripts                                   # 집계·렌더 단위 테스트
+
+apps/mobile/.maestro/run.sh                         # E2E (Metro가 떠 있어야 함)
+node scripts/e2e-report.mjs \
+  --input apps/mobile/.maestro/artifacts/<타임스탬프>/report.xml --out /tmp/status-data
 ```
 
 ## 알아둘 것

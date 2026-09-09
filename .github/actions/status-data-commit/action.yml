@@ -1,0 +1,37 @@
+name: status-data 커밋
+description: .status-data 의 변경을 status-data 브랜치에 푸시한다. 변경이 없으면 조용히 넘어간다.
+
+inputs:
+  message:
+    description: 커밋 메시지
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      working-directory: .status-data
+      env:
+        MESSAGE: ${{ inputs.message }}
+      run: |
+        git add -A
+        if git diff --cached --quiet; then
+          echo "변경 없음"
+          exit 0
+        fi
+        git commit -q -m "$MESSAGE"
+
+        # 헬스체크(30분)와 E2E(야간)는 서로 다른 워크플로라 concurrency 그룹으로 막을 수
+        # 없다. 겹치면 푸시가 거절되므로 리베이스 후 다시 민다. 둘은 서로 다른 파일을
+        # 건드리므로(health/*.jsonl vs e2e/latest.json) 리베이스는 충돌 없이 끝난다.
+        for attempt in 1 2 3; do
+          if git push -q origin status-data; then
+            exit 0
+          fi
+          echo "푸시 충돌 — 리베이스 후 재시도 ($attempt/3)"
+          git pull -q --rebase origin status-data
+          sleep 3
+        done
+
+        echo "::error::status-data 푸시에 3회 실패했다"
+        exit 1

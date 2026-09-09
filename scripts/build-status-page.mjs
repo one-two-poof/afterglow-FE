@@ -18,6 +18,11 @@ import { PROBES } from "./health-check.mjs";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 const BUCKET_MS = 30 * 60 * 1000;
+/**
+ * 카드 하나에 나열할 실패 개수 상한. 플로우·프로브가 늘어 한꺼번에 여러 개가 깨지면
+ * 카드 하나가 페이지를 통째로 밀어낸다 — 전체 목록은 아티팩트의 리포트에 있다.
+ */
+const MAX_LISTED_FAILURES = 5;
 
 const PROBE_LABELS = new Map(PROBES.map((probe) => [probe.id, probe.label]));
 
@@ -80,7 +85,7 @@ export function summarizeHealth(records, { now = Date.now() } = {}) {
       buckets,
       failures: recent
         .filter((record) => !record.ok)
-        .slice(-5)
+        .slice(-MAX_LISTED_FAILURES)
         .reverse(),
     };
   });
@@ -173,11 +178,16 @@ function renderE2E(e2e, now) {
         ${
           failed.length > 0
             ? `<ul class="fails">${failed
+                .slice(0, MAX_LISTED_FAILURES)
                 .map(
                   (flow) =>
                     `<li><b>${escape(flow.name)}</b> ${escape(flow.step ?? "")}</li>`,
                 )
-                .join("")}</ul>`
+                .join("")}${
+                failed.length > MAX_LISTED_FAILURES
+                  ? `<li>외 ${failed.length - MAX_LISTED_FAILURES}건 — 아티팩트의 리포트 참고</li>`
+                  : ""
+              }</ul>`
             : ""
         }
       </article>`;
