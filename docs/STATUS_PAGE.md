@@ -66,6 +66,12 @@ CI에는 그 상태가 없다. 그래서 CI는 **Release 시뮬레이터 빌드*
 앱에 embed되고 Metro 없이 실행된다. `ios/`는 gitignore 대상(CNG)이라 매 실행마다 `expo prebuild`로
 생성하고, Pods만 캐시한다.
 
+**드라이버 기동**: Maestro의 XCUITest 드라이버는 CI에서 자주 늦게 뜬다(시뮬레이터 첫 부팅에
+데이터 마이그레이션만 1분 이상). `MAESTRO_DRIVER_STARTUP_TIMEOUT`을 5분으로 두고,
+**드라이버 기동 실패에만** 시뮬레이터를 다시 띄워 1회 재시도한다. 플로우가 실제로 깨진 경우는
+재시도하지 않는다 — 실행 시간만 두 배가 되고 결과는 같다. Maestro 버전은 2.10.0으로 고정한다
+(고정하지 않으면 아무 커밋 없이 결과가 바뀔 수 있다).
+
 결과는 JUnit XML → `scripts/e2e-report.mjs` → `e2e/latest.json`으로 요약해 상태 페이지가 읽는다.
 스크린샷·화면계층은 Actions 아티팩트로 14일 보관한다(실패했을 때 이게 제일 쓸모 있다).
 
