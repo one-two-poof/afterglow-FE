@@ -85,3 +85,24 @@ test("리포트가 비어 있어도 터지지 않는다", () => {
     failed: [],
   });
 });
+
+test("maestro 2.10이 실제로 뱉은 리포트를 읽는다", () => {
+  // apps/mobile/.maestro/tab-navigation.yaml 을 Release 빌드에서 돌려 얻은 실제 출력.
+  const cases = parseJUnit(`<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="iPhone 17 - iOS 26.5 - A309F30C" tests="1" failures="0" time="114.583" timestamp="2026-09-09T16:45:58">
+    <testcase id="tab-navigation" name="tab-navigation" classname="tab-navigation" file="apps/mobile/.maestro/tab-navigation.yaml" time="114.528" timestamp="2026-09-09T16:45:58" status="SUCCESS"/>
+  </testsuite>
+</testsuites>`);
+
+  assert.deepEqual(cases, [{ name: "tab-navigation", ok: true }]);
+});
+
+test("failure 엘리먼트가 없어도 status가 SUCCESS가 아니면 실패로 센다", () => {
+  const [testCase] = parseJUnit(
+    `<testcase name="login-validation" status="ERROR"/>`,
+  );
+
+  assert.equal(testCase.ok, false);
+  assert.equal(testCase.step, "상태 ERROR");
+});

@@ -53,7 +53,14 @@ export function parseJUnit(xml) {
       /<(failure|error)\b([^>]*?)(\/>|>([\s\S]*?)<\/\1>)/,
     );
     if (closing === "/>" || !failure) {
-      cases.push({ name, ok: true });
+      // maestro 2.10은 status="SUCCESS" 속성도 함께 준다. 있으면 그것까지 본다 —
+      // 실패인데 failure 엘리먼트가 없는 형태를 통과로 세지 않기 위해서다.
+      const status = attribute(attributes, "status");
+      cases.push(
+        status && status.toUpperCase() !== "SUCCESS"
+          ? { name, ok: false, step: `상태 ${status}` }
+          : { name, ok: true },
+      );
       continue;
     }
 

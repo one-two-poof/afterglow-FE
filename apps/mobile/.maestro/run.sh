@@ -34,8 +34,8 @@ TARGET="${1:-${MOBILE_DIR}/.maestro}"
 
 echo "▶ maestro test ${TARGET}"
 echo "  artifacts → ${OUT}"
-# --format junit: CI(.github/workflows/e2e.yml)와 같은 리포트를 로컬에서도 남긴다.
-#   scripts/e2e-report.mjs로 요약 JSON까지 만들어 볼 수 있다.
+# --format JUNIT: CI(.github/workflows/e2e.yml)와 같은 리포트를 로컬에서도 남긴다.
+#   scripts/e2e-report.mjs로 요약 JSON까지 만들어 볼 수 있다. 값은 대문자 열거형이다.
 maestro test "${TARGET}" --exclude-tags=subflow \
-  --format junit --output "${OUT}/report.xml" \
+  --format JUNIT --output "${OUT}/report.xml" \
   --debug-output "${OUT}"

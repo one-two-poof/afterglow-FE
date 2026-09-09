@@ -78,6 +78,11 @@ jobs:
       - name: 시뮬레이터 부팅 + 앱 설치
         id: simulator
         run: |
+          # Maestro의 XCUITest 드라이버는 시뮬레이터가 여러 대 켜져 있으면 시작에 실패한다
+          # (LocalXCTestInstaller.start 예외). 러너 이미지에 이미 부팅된 기기가 있을 수
+          # 있으므로 전부 내리고 하나만 띄운다.
+          xcrun simctl shutdown all || true
+
           UDID=$(xcrun simctl list -j devices available \
             | jq -r '[.devices[][] | select(.name | startswith("iPhone"))] | last | .udid')
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
@@ -101,10 +106,14 @@ jobs:
           MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED: "true"
           MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
         run: |
-          maestro --device "${{ steps.simulator.outputs.udid }}" test apps/mobile/.maestro \
+          # --device는 test 서브커맨드 옵션이고(전역 옵션 아님), --format 값은 대문자
+          # 열거형이다(JUNIT/HTML/HTML-DETAILED/NOOP). maestro 2.10 기준.
+          # --flatten-debug-output: 실행마다 타임스탬프 하위 폴더를 만들지 않아 아티팩트
+          # 경로가 고정된다.
+          maestro test --device "${{ steps.simulator.outputs.udid }}" apps/mobile/.maestro \
             --exclude-tags=subflow \
-            --format junit --output report.xml \
-            --debug-output maestro-artifacts
+            --format JUNIT --output report.xml \
+            --debug-output maestro-artifacts --flatten-debug-output
 
       # 실패한 실행일수록 스크린샷이 필요하다 — 결과와 무관하게 올린다.
       - name: 실행 아티팩트 업로드
