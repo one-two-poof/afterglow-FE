@@ -8,6 +8,8 @@
 # 동작:
 #   - Java(keg-only openjdk)와 maestro를 PATH에 올린다.
 #   - 스텝별 스크린샷/화면계층/로그를 .maestro/artifacts/<타임스탬프>/ 에 저장한다(사후 확인용).
+#   - subflows/ 의 공용 서브플로우는 단독 실행 대상이 아니므로 tags:[subflow]로 제외한다
+#     (디렉터리 실행은 하위 디렉터리까지 훑기 때문에 태그로 걸러야 한다).
 #
 # 사전조건:
 #   1) 다른 터미널에서 `pnpm --filter mobile dev`(= expo start --dev-client)로 Metro가 떠 있어야 함.
@@ -31,4 +33,4 @@ TARGET="${1:-${MOBILE_DIR}/.maestro}"
 
 echo "▶ maestro test ${TARGET}"
 echo "  artifacts → ${OUT}"
-maestro test "${TARGET}" --debug-output "${OUT}"
+maestro test "${TARGET}" --exclude-tags=subflow --debug-output "${OUT}"

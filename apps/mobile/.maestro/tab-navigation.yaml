@@ -1,0 +1,61 @@
+# 탭 네비게이션 스모크 E2E
+# 게스트 상태에서 홈 → 관광 정보 → 내 정보 탭을 순회하며 각 화면의 고유 요소를 확인하고,
+# 인증 전용 탭("내 코스")이 노출되지 않는지 단언한다. 백엔드/계정 불필요.
+# 라우팅·탭 바 회귀를 가장 싸게 잡는 테스트.
+#
+# 탭 구성 주의: (tabs)/_layout.tsx가 "내 코스" 탭에 href: isAuthed ? undefined : null 을 줘
+#              미로그인일 때는 탭 바에서 숨긴다 → 게스트 탭 바는 3개(홈/관광 정보/내 정보)다.
+#              게스트로 고정하는 이유는 "내 정보"가 로그인 여부에 따라 화면이 달라지기 때문.
+#
+# 셀렉터 주의:
+# - 탭 라벨은 "내 정보, tab, 3 of 3"처럼 장식이 붙어 정확 매칭이 안 된다 → .*...* 사용.
+# - 탭 라벨 "관광 정보"(공백 있음)와 화면 제목 "관광정보"(공백 없음)는 다른 문자열이다.
+#   화면 제목은 정확 매칭이라 탭 라벨과 겹치지 않는다.
+appId: com.dunaduneos.afterglow
+---
+- launchApp
+# 탭 바만 보고 진행하면 아직 JS가 바쁜 상태라 탭 탭이 씹힌다.
+# 홈 FAB(home.plan.open)까지 기다려 첫 화면 렌더가 끝난 걸 확인한다.
+- extendedWaitUntil:
+    visible: ".*여행 계획 짜기.*"
+    timeout: 90000
+
+# 0) 미로그인 상태 보장 (끝나면 "내 정보" 탭 + 게스트 화면)
+- runFlow: subflows/ensure-logged-out.yaml
+
+# 1) 내 정보(게스트): 프로필 자리 + 설정 목록. 인증 전용 탭은 숨겨져 있어야 한다.
+- assertVisible: ".*로그인하기.*" # settings.login
+- assertNotVisible: ".*내 코스.*" # tabs.courses — 미로그인이면 탭 바에 없어야 한다
+- takeScreenshot: "01-tab-my-page-guest"
+
+# 2) 홈: 검색창 + 여행 계획 FAB. 지도(MapLibre) 초기화가 느려 넉넉히 대기한다.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn: ".*홈.*"
+      - extendedWaitUntil:
+          visible: ".*여행 계획 짜기.*" # home.plan.open (FAB 접근성 라벨)
+          timeout: 30000
+- assertVisible: ".*장소 검색.*" # home.search.label (검색 Input 접근성 라벨)
+- takeScreenshot: "02-tab-home"
+
+# 3) 관광 정보: 헤더는 목록 로딩/에러와 무관하게 항상 렌더된다 → 네트워크 없이도 통과.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn: ".*관광 정보.*"
+      - extendedWaitUntil:
+          visible: "관광정보" # tourism.title
+          timeout: 15000
+- assertVisible: "카테고리" # tourism.category.label
+- takeScreenshot: "03-tab-tourism"
+
+# 4) 다시 내 정보로 돌아와 탭 왕복이 정상인지 확인
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn: ".*내 정보.*"
+      - extendedWaitUntil:
+          visible: ".*언어 설정.*"
+          timeout: 15000
+- takeScreenshot: "04-tab-my-page-again"

@@ -1,44 +1,23 @@
 # 로그인 유효성 검증 E2E
-# 내 정보 → (로그인돼 있으면 로그아웃) → "로그인하기" → 로그인 화면 →
+# 게스트 상태 보장 → "로그인하기" → 로그인 화면 →
 # 빈 값/잘못된 이메일 제출 시 에러 문구 확인. 백엔드/계정 불필요.
 # 로그인 입력·버튼은 testID(id:, 정확 매칭), 탭·설정행은 조합 라벨이라 부분일치 정규식(.*...*).
 #
-# 참고1: 인증 토큰은 expo-secure-store(iOS Keychain)에 저장돼 Maestro clearState로는 안 지워진다.
-#        → 미로그인 상태는 clearState가 아니라 UI 로그아웃으로 보장. (clearState는 dev-client의
-#          Metro 연결 URL까지 지워 dev 런처로 튀는 문제도 있어 미사용)
-# 참고2: 탭 접근성 라벨은 "내 정보, tab, 4 of 4"처럼 장식이 붙어 정확 매칭이 안 된다 → .*...* 사용.
+# 참고: launchApp에 clearState를 쓰지 않는 이유와 게스트 상태를 만드는 방법은
+#       subflows/ensure-logged-out.yaml 주석 참고.
 appId: com.dunaduneos.afterglow
 ---
 - launchApp # clearState 없이 재실행 → dev-client가 마지막 Metro URL로 자동 재연결
+# 탭 바만 보고 진행하면 아직 JS가 바쁜 상태라 탭 탭이 씹힌다.
+# 홈 FAB(home.plan.open)까지 기다려 첫 화면 렌더가 끝난 걸 확인한다.
 - extendedWaitUntil:
-    visible: ".*내 정보.*"
+    visible: ".*여행 계획 짜기.*"
     timeout: 90000
 
-# 0) 미로그인 상태 보장: 내 정보에서 로그인돼 있으면 로그아웃
-- tapOn: ".*내 정보.*"
-# my-page 로딩(skeleton) 대기: "언어 설정" 행은 로그인/게스트 양쪽에 항상 있어 로딩 완료 신호로 사용.
-# (이 대기가 없으면 로딩 중에 "로그아웃" 체크가 SKIP돼 로그인 상태가 유지됨)
-- extendedWaitUntil:
-    visible: ".*언어 설정.*"
-    timeout: 15000
-- runFlow:
-    when:
-      visible: ".*로그아웃.*"
-    commands:
-      - tapOn: ".*로그아웃.*" # 설정의 로그아웃 행
-      # 로그아웃 확인 모달이 생기면 확인 버튼을 누른다. 현재 앱엔 모달이 없어 SKIP된다.
-      # ⚠️ 다른 브랜치에서 로그아웃 확인 모달을 회원 탈퇴처럼 Alert.alert로 구현할 것:
-      #    제목="로그아웃" / 메시지="로그아웃하면 다시 로그인해야 이용할 수 있어요. 정말 로그아웃할까요?"
-      #    취소 버튼="취소" / 확인 버튼="확인"
-      - runFlow:
-          when:
-            visible: "확인"
-          commands:
-            - tapOn: "확인" # 모달 확인 버튼
-      - assertVisible: ".*로그인하기.*" # 게스트 화면으로 전환 확인
+# 0) 미로그인 상태 보장 (끝나면 "내 정보" 탭 + 게스트 화면)
+- runFlow: subflows/ensure-logged-out.yaml
 
 # 1) 게스트 내 정보 → "로그인하기" → 로그인 화면
-- assertVisible: ".*로그인하기.*"
 - takeScreenshot: "01-my-info-guest"
 - tapOn: ".*로그인하기.*"
 # 화면 전환 지연을 흡수 (assertVisible 기본 타임아웃보다 넉넉히)
