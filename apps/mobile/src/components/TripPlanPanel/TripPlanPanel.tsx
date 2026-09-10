@@ -32,10 +32,7 @@ import { Image } from "@/components/Image";
 import { useCourseSelection } from "@/hooks/use-course-selection";
 import { useMe } from "@/hooks/use-me";
 import { useI18n } from "@/i18n/i18n-provider";
-import {
-  type CourseMarker,
-  type RecommendedCourse,
-} from "@/types/recommendation";
+import { type RecommendedCourse } from "@/types/recommendation";
 
 import { useRecommendCourses } from "./hooks/use-recommend-courses";
 import { useTripPlanForm } from "./hooks/use-trip-plan-form";
@@ -50,13 +47,8 @@ const DRAG_THRESHOLD = 48;
 export interface TripPlanPanelProps {
   open: boolean;
   onClose: () => void;
-  /**
-   * 결과 단계에서 코스의 장소를 탭했을 때 호출. 패널을 최소화하고 지도에서 해당
-   * 지점의 상세 카드를 열도록 호출부가 처리한다(패널 상태는 유지 → 다시 열기 가능).
-   */
-  onViewPlace?: (marker: CourseMarker) => void;
-  /** 현재 선택 중인 추천 코스를 홈 지도에 동기화한다. */
-  onCourseChange?: (course?: RecommendedCourse) => void;
+  /** 결과 단계에서 현재 추천 코스 전체를 지도에서 본다. */
+  onViewCourse?: (course: RecommendedCourse) => void;
 }
 
 /**
@@ -69,8 +61,7 @@ export interface TripPlanPanelProps {
 export const TripPlanPanel = ({
   open,
   onClose,
-  onViewPlace,
-  onCourseChange,
+  onViewCourse,
 }: TripPlanPanelProps) => {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -209,10 +200,6 @@ export const TripPlanPanel = ({
 
   // 현재 결과 단계에서 보고 있는 코스 (모두 건너뛰면 undefined)
   const currentCourse = recommendations[rankIndex];
-
-  useEffect(() => {
-    onCourseChange?.(open && phase === "result" ? currentCourse : undefined);
-  }, [currentCourse, onCourseChange, open, phase]);
 
   const handleBack = useCallback(() => {
     if (phase === "result") {
@@ -373,7 +360,7 @@ export const TripPlanPanel = ({
                     course={currentCourse}
                     index={rankIndex}
                     total={recommendations.length}
-                    onPlacePress={onViewPlace}
+                    onViewCourse={onViewCourse}
                   />
                 ) : (
                   <View className="items-center justify-center gap-2 py-16">
