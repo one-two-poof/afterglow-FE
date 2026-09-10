@@ -185,12 +185,25 @@ export function savedCourseToMarkers(course: SavedCourse): CourseMarker[] {
   return savedCourseToMapDecoration(course).markers;
 }
 
+/** 추천 중인 코스도 저장된 코스와 동일한 지도 표현으로 변환한다. */
+export function recommendedCourseToMapDecoration(
+  course: RecommendedCourse,
+): SavedCourseMapDecoration {
+  return buildCourseMapDecoration(course);
+}
+
 /**
  * 저장 코스를 날짜별 색상으로 꾸민 지도 데이터로 변환한다.
  * 출발지는 선에는 포함하지만 번호를 부여하지 않고, 방문 장소만 그날의 순서로 표시한다.
  */
 export function savedCourseToMapDecoration(
   course: SavedCourse,
+): SavedCourseMapDecoration {
+  return buildCourseMapDecoration(course);
+}
+
+function buildCourseMapDecoration(
+  course: RecommendedCourse,
 ): SavedCourseMapDecoration {
   const markers: CourseMarker[] = [];
   const connectionLines: MapConnectionLine[] = [];

@@ -24,7 +24,10 @@ import { Image } from "@/components/Image";
 import { useCourseSelection } from "@/hooks/use-course-selection";
 import { useMe } from "@/hooks/use-me";
 import { useI18n } from "@/i18n/i18n-provider";
-import { type CourseMarker } from "@/types/recommendation";
+import {
+  type CourseMarker,
+  type RecommendedCourse,
+} from "@/types/recommendation";
 
 import { useRecommendCourses } from "./hooks/use-recommend-courses";
 import { useTripPlanForm } from "./hooks/use-trip-plan-form";
@@ -42,6 +45,8 @@ export interface TripPlanPanelProps {
    * 지점의 상세 카드를 열도록 호출부가 처리한다(패널 상태는 유지 → 다시 열기 가능).
    */
   onViewPlace?: (marker: CourseMarker) => void;
+  /** 현재 선택 중인 추천 코스를 홈 지도에 동기화한다. */
+  onCourseChange?: (course?: RecommendedCourse) => void;
 }
 
 /**
@@ -55,6 +60,7 @@ export const TripPlanPanel = ({
   open,
   onClose,
   onViewPlace,
+  onCourseChange,
 }: TripPlanPanelProps) => {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -157,6 +163,10 @@ export const TripPlanPanel = ({
 
   // 현재 결과 단계에서 보고 있는 코스 (모두 건너뛰면 undefined)
   const currentCourse = recommendations[rankIndex];
+
+  useEffect(() => {
+    onCourseChange?.(open && phase === "result" ? currentCourse : undefined);
+  }, [currentCourse, onCourseChange, open, phase]);
 
   const handleBack = useCallback(() => {
     if (phase === "result") {
