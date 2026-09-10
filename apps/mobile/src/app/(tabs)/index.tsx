@@ -65,7 +65,9 @@ import { type PlaceCategory } from "@/lib/places";
 import { type Place } from "@/types/place";
 import {
   type CourseMarker,
+  type RecommendedCourse,
   courseTitle,
+  recommendedCourseToMapDecoration,
   savedCourseToMapDecoration,
 } from "@/types/recommendation";
 
@@ -224,6 +226,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((s) => s.show);
   const [planOpen, setPlanOpen] = useState(false);
+  const [previewCourse, setPreviewCourse] = useState<RecommendedCourse>();
   // 추천 코스에서 탭한 장소의 마커(지도에 찍고 카메라 이동 + 상세 카드 표시).
   // null이 아니면 "패널에서 열린 상세"라는 뜻 → 상세 카드 X를 누르면 패널로 복귀한다.
   const [coursePlaceMarker, setCoursePlaceMarker] = useState<MapMarker | null>(
@@ -303,6 +306,11 @@ export default function HomeScreen() {
   const selectedCourseMap = useMemo(
     () => (selectedCourse ? savedCourseToMapDecoration(selectedCourse) : null),
     [selectedCourse],
+  );
+  const previewCourseMap = useMemo(
+    () =>
+      previewCourse ? recommendedCourseToMapDecoration(previewCourse) : null,
+    [previewCourse],
   );
 
   useEffect(() => {
@@ -415,6 +423,10 @@ export default function HomeScreen() {
   };
 
   const selectMarker = (marker: MapMarker) => {
+    if (planOpen && previewCourseMap) {
+      viewCoursePlace(marker as CourseMarker);
+      return;
+    }
     setDetail(marker);
     setDetailExpanded(false);
 
@@ -823,6 +835,9 @@ export default function HomeScreen() {
     if (coursePlaceMarker) {
       return [coursePlaceMarker];
     }
+    if (previewCourseMap) {
+      return previewCourseMap.markers;
+    }
     if (selectedPlace) {
       return [
         {
@@ -842,6 +857,7 @@ export default function HomeScreen() {
     }));
   }, [
     coursePlaceMarker,
+    previewCourseMap,
     savedCoursePlaceMarker,
     selectedPlace,
     selectedCourse,
@@ -857,10 +873,13 @@ export default function HomeScreen() {
         connectionLines={
           savedCoursePlaceMarker
             ? undefined
-            : selectedCourseMap?.connectionLines
+            : (previewCourseMap?.connectionLines ??
+              selectedCourseMap?.connectionLines)
         }
         markerFitPadding={
-          selectedCourseMap ? SAVED_COURSE_MAP_PADDING : undefined
+          previewCourseMap || selectedCourseMap
+            ? SAVED_COURSE_MAP_PADDING
+            : undefined
         }
         onMarkerPress={selectMarker}
         onMapPress={() => {
@@ -1042,6 +1061,7 @@ export default function HomeScreen() {
         open={planOpen}
         onClose={() => setPlanOpen(false)}
         onViewPlace={viewCoursePlace}
+        onCourseChange={setPreviewCourse}
       />
 
       {/* 마커 클릭 상세 카드 — 하단 오버레이(태그리스트 위). 경로 설정 중엔 패널로 대체. */}
