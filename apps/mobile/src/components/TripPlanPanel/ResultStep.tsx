@@ -1,11 +1,9 @@
+import { Button } from "@afterglow/ui-native";
 import { Text, View } from "react-native";
 
 import { CourseItinerary } from "@/components/MyCourse/CourseItinerary";
 import { useI18n } from "@/i18n/i18n-provider";
-import {
-  type CourseMarker,
-  type RecommendedCourse,
-} from "@/types/recommendation";
+import { type RecommendedCourse } from "@/types/recommendation";
 
 export interface ResultStepProps {
   course: RecommendedCourse;
@@ -13,8 +11,8 @@ export interface ResultStepProps {
   index: number;
   /** 전체 추천 코스 수 */
   total: number;
-  /** 타임라인 장소 탭 시 지도 상세로 이동(패널 최소화). */
-  onPlacePress?: (marker: CourseMarker) => void;
+  /** 현재 추천 코스 전체를 지도에서 본다. */
+  onViewCourse?: (course: RecommendedCourse) => void;
 }
 
 /**
@@ -26,7 +24,7 @@ export function ResultStep({
   course,
   index,
   total,
-  onPlacePress,
+  onViewCourse,
 }: ResultStepProps) {
   const { t } = useI18n();
   return (
@@ -42,7 +40,19 @@ export function ResultStep({
         </Text>
       </View>
 
-      <CourseItinerary course={course} onPlacePress={onPlacePress} />
+      <CourseItinerary
+        course={course}
+        summaryAction={
+          <Button
+            variant="secondary"
+            size="lg"
+            className="w-full"
+            onPress={() => onViewCourse?.(course)}
+          >
+            {t("course.viewCourseOnMap")}
+          </Button>
+        }
+      />
     </View>
   );
 }

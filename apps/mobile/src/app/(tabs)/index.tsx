@@ -64,7 +64,6 @@ import { useI18n } from "@/i18n/i18n-provider";
 import { type PlaceCategory } from "@/lib/places";
 import { type Place } from "@/types/place";
 import {
-  type CourseMarker,
   type RecommendedCourse,
   courseTitle,
   recommendedCourseToMapDecoration,
@@ -227,8 +226,7 @@ export default function HomeScreen() {
   const showToast = useToastStore((s) => s.show);
   const [planOpen, setPlanOpen] = useState(false);
   const [previewCourse, setPreviewCourse] = useState<RecommendedCourse>();
-  // 추천 코스에서 탭한 장소의 마커(지도에 찍고 카메라 이동 + 상세 카드 표시).
-  // null이 아니면 "패널에서 열린 상세"라는 뜻 → 상세 카드 X를 누르면 패널로 복귀한다.
+  // 다른 화면에서 특정 장소 하나를 지도에 열 때 사용하는 포커스 마커.
   const [coursePlaceMarker, setCoursePlaceMarker] = useState<MapMarker | null>(
     null,
   );
@@ -312,6 +310,7 @@ export default function HomeScreen() {
       previewCourse ? recommendedCourseToMapDecoration(previewCourse) : null,
     [previewCourse],
   );
+  const activeCourseMap = previewCourseMap ?? selectedCourseMap;
 
   useEffect(() => {
     if (!detail?.detail || detail.detail.address) return;
@@ -375,6 +374,7 @@ export default function HomeScreen() {
     }
     setCoursePlaceMarker(null);
     setSavedCoursePlaceMarker(null);
+    setPreviewCourse(undefined);
     setDetail(null);
     setPlanOpen(true);
   };
@@ -389,17 +389,17 @@ export default function HomeScreen() {
     setRouteLines([]);
   }, [cancelRoute]);
 
-  // 추천 코스에서 장소 탭: 패널을 잠시 내리고(상태 보존) 지도에서 해당 지점으로 이동 +
-  // 상세 카드를 연다. 이 상세는 coursePlaceMarker로 표시되어, X를 누르면 패널로 복귀한다.
-  // (resetRoutePlan 정의 이후에 둔다 — React Compiler 메모 보존을 위해 forward-ref 회피)
-  const viewCoursePlace = (marker: CourseMarker) => {
+  // 추천 결과의 전체 코스 지도 보기: 패널 상태는 보존하고 모든 마커와 연결선을 표시한다.
+  const viewRecommendedCourse = (course: RecommendedCourse) => {
     resetRoutePlan();
     setSearch("");
     setSearchOpen(false);
     setSelectedPlace(null);
     setFilter(FILTER_ALL);
-    setCoursePlaceMarker(marker);
-    setDetail(marker);
+    setCoursePlaceMarker(null);
+    setSavedCoursePlaceMarker(null);
+    setPreviewCourse(course);
+    setDetail(null);
     setDetailExpanded(false);
     setPlanOpen(false);
   };
@@ -410,6 +410,7 @@ export default function HomeScreen() {
     setSelectedPlace(place);
     // 검색 장소를 고르면 코스 선택은 해제한다(마커 대상은 하나만).
     setFilter(FILTER_ALL);
+    setPreviewCourse(undefined);
     setCoursePlaceMarker(null);
     setSavedCoursePlaceMarker(null);
     resetRoutePlan();
@@ -423,10 +424,6 @@ export default function HomeScreen() {
   };
 
   const selectMarker = (marker: MapMarker) => {
-    if (planOpen && previewCourseMap) {
-      viewCoursePlace(marker as CourseMarker);
-      return;
-    }
     setDetail(marker);
     setDetailExpanded(false);
 
@@ -499,6 +496,7 @@ export default function HomeScreen() {
     }
     setFilter(value);
     setSelectedPlace(null);
+    setPreviewCourse(undefined);
     setDetail(null);
     setCoursePlaceMarker(null);
     setSavedCoursePlaceMarker(null);
@@ -624,18 +622,13 @@ export default function HomeScreen() {
     tourismPlaceType,
   ]);
 
-  // 상세 카드 닫기(X). 패널에서 열린 상세(coursePlaceMarker)면 닫는 대신 패널로 복귀한다.
-  // 일반 상세(검색/마커/카테고리)는 그냥 닫는다. 어느 쪽이든 그린 경로는 정리한다.
+  // 상세 카드 닫기(X). 추천 코스 지도는 유지하고 상세와 그린 경로만 정리한다.
   const closeDetail = () => {
-    const fromPanel = coursePlaceMarker !== null;
     setDetailExpanded(false);
     setDetail(null);
     setCoursePlaceMarker(null);
     setSavedCoursePlaceMarker(null);
     resetRoutePlan();
-    if (fromPanel) {
-      setPlanOpen(true);
-    }
   };
 
   // "경로 안내": 경로 설정 패널을 연다. 시작지=현위치(기본), 도착지=클릭한 장소(기본).
@@ -826,8 +819,7 @@ export default function HomeScreen() {
     return pins;
   }, [routePlanOpen, startPoint, endPoint]);
 
-  // 마커 우선순위: 추천 코스 장소 → 검색 장소 → 선택 코스 → 선택 카테고리.
-  // 추천 코스에서 장소를 탭하면 그 한 지점만 찍어 카메라가 이동한다(단일 마커 flyTo).
+  // 마커 우선순위: 외부 화면 포커스 → 추천 코스 전체 → 검색 장소 → 저장 코스 → 카테고리.
   const markers = useMemo<MapMarker[]>(() => {
     if (savedCoursePlaceMarker) {
       return [savedCoursePlaceMarker];
@@ -873,13 +865,10 @@ export default function HomeScreen() {
         connectionLines={
           savedCoursePlaceMarker
             ? undefined
-            : (previewCourseMap?.connectionLines ??
-              selectedCourseMap?.connectionLines)
+            : activeCourseMap?.connectionLines
         }
         markerFitPadding={
-          previewCourseMap || selectedCourseMap
-            ? SAVED_COURSE_MAP_PADDING
-            : undefined
+          activeCourseMap ? SAVED_COURSE_MAP_PADDING : undefined
         }
         onMarkerPress={selectMarker}
         onMapPress={() => {
@@ -991,15 +980,15 @@ export default function HomeScreen() {
           accessibilityLabel={t("home.plan.open")}
           onPress={openPlan}
           className={`mr-4 size-14 bg-primary shadow-md active:bg-action-primary-hover items-center justify-center self-end rounded-full ${
-            selectedCourseMap && !showResults ? "" : "mb-7"
+            activeCourseMap && !showResults ? "" : "mb-7"
           }`}
         >
           <Plus size={28} color={colors["on-action-primary"]} />
         </Pressable>
 
-        {selectedCourseMap && !showResults ? (
+        {activeCourseMap && !showResults ? (
           <View pointerEvents="box-none" className="px-4">
-            <CourseDayLegend days={selectedCourseMap.days} locale={locale} />
+            <CourseDayLegend days={activeCourseMap.days} locale={locale} />
           </View>
         ) : null}
 
@@ -1060,8 +1049,7 @@ export default function HomeScreen() {
       <TripPlanPanel
         open={planOpen}
         onClose={() => setPlanOpen(false)}
-        onViewPlace={viewCoursePlace}
-        onCourseChange={setPreviewCourse}
+        onViewCourse={viewRecommendedCourse}
       />
 
       {/* 마커 클릭 상세 카드 — 하단 오버레이(태그리스트 위). 경로 설정 중엔 패널로 대체. */}
