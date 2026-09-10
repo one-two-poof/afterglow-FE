@@ -1,5 +1,5 @@
 import { FlatList, Pressable, Text, View } from "react-native";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -22,6 +22,7 @@ export function TourismInfo() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<TourismInfoCategory>("all");
   const router = useRouter();
+  const listRef = useRef<FlatList<Place>>(null);
   const debouncedSearch = useDebounce(search, 300);
   const {
     data: places = [],
@@ -38,7 +39,9 @@ export function TourismInfo() {
   }, [category, places]);
 
   const chooseCategory = (nextCategory: TourismInfoCategory) => {
+    if (nextCategory === category) return;
     setCategory(nextCategory);
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
   };
 
   const openPlace = (place: Place) => {
@@ -76,6 +79,7 @@ export function TourismInfo() {
         </View>
       ) : (
         <FlatList
+          ref={listRef}
           data={visiblePlaces}
           keyExtractor={(place) => `${place.placeType}:${place.id}`}
           renderItem={({ item }) => (
